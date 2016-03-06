@@ -103,19 +103,17 @@ namespace leap
 
     private:
 
-      bool isEOL(T ch) const { return (ch == 0x0A || ch == 0x0D || ch == 0); }
-      bool isWhite(T ch) const { return (ch == ' ' || ch == '\t' || ch == 0x0A || ch == 0x0D); }
+      bool is_eol(T ch) const { return (ch == 0x0A || ch == 0x0D || ch == 0); }
+      bool is_white(T ch) const { return (ch == ' ' || ch == '\t' || ch == 0x0A || ch == 0x0D); }
 
       bool getline(T *buffer, unsigned int n);
 
-      void preParse(const T *src, T *dest, unsigned int n);
-      void parseSetVariable(T *buffer);
-      void parseHeaderLine(T *buffer1, entry_type *entry);
-      void parseEntryLine(T *buffer, entry_type *entry);
+      void preparse(const T *src, T *dest, unsigned int n);
+      void parse_hashdefine(T *buffer);
+      void parse_headerline(T *buffer1, entry_type *entry);
+      void parse_entryline(T *buffer, entry_type *entry);
 
       string_type expand(string_type const &src);
-
-      void add(entry_type *entry, string_type const &name, string_type const &value);
 
     private:
 
@@ -210,13 +208,13 @@ namespace leap
       return false;
 
     // Retreive characters until eol
-    while (--n > 0 && m_sb->sgetc() != traits::eof() && !isEOL(m_sb->sgetc()))
+    while (--n > 0 && m_sb->sgetc() != traits::eof() && !is_eol(m_sb->sgetc()))
       *buffer++ = m_sb->sbumpc();
 
     *buffer = 0;
 
     // Skip over eol character(s)
-    while (isEOL(m_sb->sgetc()))
+    while (is_eol(m_sb->sgetc()))
       m_sb->sbumpc();
 
     m_sbpos = m_sb->pubseekoff(0, ios_base::cur, ios_base::in);
@@ -225,9 +223,9 @@ namespace leap
   }
 
 
-  //|///////////////////// sapstream::preParse //////////////////////////////
+  //|///////////////////// sapstream::pre_parse /////////////////////////////
   template<typename T, class traits>
-  void basic_sapstream<T, traits>::preParse(const T *src, T *dest, unsigned int n)
+  void basic_sapstream<T, traits>::preparse(const T *src, T *dest, unsigned int n)
   {
     // Check for whole line comments
     if (*src == '#' || *src == '/' || *src == '!' || *src == '{' || *src == '}')
@@ -241,24 +239,24 @@ namespace leap
     //
 
     T *ch = dest;
-    while (--n > 0 && !isEOL(*src))
+    while (--n > 0 && !is_eol(*src))
       *ch++ = *src++;
 
     *ch = 0;
-    while (ch >= dest && (*ch == 0 || isWhite(*ch)))
+    while (ch >= dest && (*ch == 0 || is_white(*ch)))
       *ch-- = 0;
   }
 
 
-  //|///////////////////// sapstream::parseSetVariable //////////////////////
+  //|///////////////////// sapstream::parse_setvariable /////////////////////
   template<typename T, class traits>
-  void basic_sapstream<T, traits>::parseSetVariable(T *buffer)
+  void basic_sapstream<T, traits>::parse_hashdefine(T *buffer)
   {
     // skip "#define"
     buffer += 7;
 
     // skip whitespaces
-    while (isWhite(*buffer))
+    while (is_white(*buffer))
       ++buffer;
 
     //
@@ -267,7 +265,7 @@ namespace leap
 
     const T *name = buffer;
 
-    while (*buffer != 0 && !isWhite(*buffer))
+    while (*buffer != 0 && !is_white(*buffer))
       ++buffer;
 
     if (*buffer != 0)
@@ -276,7 +274,7 @@ namespace leap
     }
 
     // skip whitespace
-    while (isWhite(*buffer))
+    while (is_white(*buffer))
       ++buffer;
 
     //
@@ -293,10 +291,13 @@ namespace leap
   }
 
 
-  //|///////////////////// sapstream::parseHeaderLine ///////////////////////
+  //|///////////////////// sapstream::parse_headerline //////////////////////
   template<typename T, class traits>
-  void basic_sapstream<T, traits>::parseHeaderLine(T *buffer, basic_sapentry<T, traits> *entry)
+  void basic_sapstream<T, traits>::parse_headerline(T *buffer, basic_sapentry<T, traits> *entry)
   {
+    static const string_type literal_entrytype = {'E', 'n', 't', 'r', 'y', 'T', 'y', 'p', 'e'};
+    static const string_type literal_entryid = {'E', 'n', 't', 'r', 'y', 'I', 'D'};
+
     entry->clear();
     entry->push_substream(*this);
 
@@ -306,7 +307,7 @@ namespace leap
 
     const T *type = buffer;
 
-    while (*buffer != 0 && !isWhite(*buffer))
+    while (*buffer != 0 && !is_white(*buffer))
       ++buffer;
 
     if (*buffer != 0)
@@ -315,8 +316,10 @@ namespace leap
     }
 
     // Skip Whitespace
-    while (isWhite(*buffer))
+    while (is_white(*buffer))
       ++buffer;
+
+    entry->add(literal_entrytype, type);
 
     //
     // Extract EntryID
@@ -324,66 +327,65 @@ namespace leap
 
     const T *id = buffer;
 
-    //
-    // Add Entry
-    //
-
-    add(entry, "EntryType", type);
-    add(entry, "EntryID", id);
+    entry->add(literal_entryid, id);
   }
 
 
-  //|///////////////////// sapstream::parseEntryLine ////////////////////////
+  //|///////////////////// sapstream::parse_entryline ///////////////////////
   template<typename T, class traits>
-  void basic_sapstream<T, traits>::parseEntryLine(T *buffer, basic_sapentry<T, traits> *entry)
+  void basic_sapstream<T, traits>::parse_entryline(T *buffer, basic_sapentry<T, traits> *entry)
   {
     if (*buffer == 0)
       return;
 
-    const T *name;
-    const T *value;
+    string_type name;
+    string_type value;
 
-    if (m_flags & NoNameSeparation)
-    {
-      name = (T*)"\0\0\0\0";
-      value = buffer;
-    }
-    else
+    if (!(m_flags & NoNameSeparation))
     {
       //
       // Extract Name
       //
 
-      name = buffer;
+      const T *beg = buffer;
 
       while (*buffer != 0 && *buffer != '=' && *buffer != '@' && *buffer != ':')
         ++buffer;
 
+      const T *end = buffer - 1;
+
       if (*buffer != 0)
       {
-        T *ch = buffer-1;
-        while (isWhite(*ch))
-          *ch-- = 0;
+        while (is_white(*end))
+          --end;
 
-        *buffer++ = 0;
+        ++buffer;
       }
 
+      name = string_type(beg, end + 1);
+
       // Skip Whitespace
-      while (isWhite(*buffer))
+      while (is_white(*buffer))
         ++buffer;
-
-      //
-      // Extract Value
-      //
-
-      value = buffer;
     }
+
+    //
+    // Extract Value
+    //
+
+    value = expand(buffer);
+
+    if (!(m_flags & NoEnvironment))
+      value = strvpnd(value);
+
+    if (!(m_flags & NoControlChars))
+      value = strxpnd(value);
 
     //
     // Add Entry
     //
 
-    add(entry, name, value);
+    entry->add(name, value);
   }
 
 
@@ -438,24 +440,6 @@ namespace leap
   }
 
 
-
-  //|///////////////////// sapstream::add ///////////////////////////////////
-  template<typename T, class traits>
-  void basic_sapstream<T, traits>::add(entry_type *entry, string_type const &name, string_type const &value)
-  {
-    string_type v = expand(value);
-
-    if (!(m_flags & NoEnvironment))
-      v = strvpnd(v);
-
-    if (!(m_flags & NoControlChars))
-      v = strxpnd(v);
-
-    entry->add(name, v);
-}
-
-
-
   //|///////////////////// sapstream::operator >> ///////////////////////////
   ///
   /// Retreive an entry from the stream
@@ -466,6 +450,8 @@ namespace leap
   template<typename T, class traits>
   basic_sapstream<T, traits> &basic_sapstream<T, traits>::operator >>(basic_sapentry<T, traits> &entry)
   {
+    static const string_type literal_hashdefine = { '#', 'd', 'e', 'f', 'i', 'n', 'e' };
+
     int level = 0;
     T buffer1[512];
     T buffer2[512];
@@ -481,11 +467,11 @@ namespace leap
       size_t pos = 0;
 
       // Skip Whitespaces
-      while (isWhite(buffer2[pos]))
+      while (is_white(buffer2[pos]))
         ++pos;
 
-      if (traits::compare(&buffer2[pos], "#define", 7) == 0)
-        parseSetVariable(&buffer2[pos]);
+      if (traits::compare(&buffer2[pos], literal_hashdefine.c_str(), 7) == 0)
+        parse_hashdefine(&buffer2[pos]);
 
       // Check if we are nesting
       if (buffer2[pos] == '{')
@@ -496,11 +482,11 @@ namespace leap
       {
         if (buffer2[pos] == '{')
         {
-          parseHeaderLine(buffer1, &entry);
+          parse_headerline(buffer1, &entry);
         }
         else
         {
-          parseEntryLine(buffer1, &entry);
+          parse_entryline(buffer1, &entry);
         }
       }
 
@@ -519,7 +505,7 @@ namespace leap
 
       if (level <= 1)
       {
-        preParse(&buffer2[pos], buffer1, sizeof(buffer1));
+        preparse(&buffer2[pos], buffer1, sizeof(buffer1));
       }
     }
 
