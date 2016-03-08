@@ -66,6 +66,7 @@ set(SRCS ${SRCS} ../include/leap/lml/rtreesearch.h)
 set(SRCS ${SRCS} ../include/leap/lml/octree.h)
 set(SRCS ${SRCS} ../include/leap/lml/array.h)
 
+set(SRCS ${SRCS} ../include/leap/lz4.h lz4.cpp)
 set(SRCS ${SRCS} ../include/leap/hash.h hash-md5.cpp hash-sha1.cpp)
 
 add_library(leap STATIC ${SRCS})
