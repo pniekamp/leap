@@ -263,285 +263,285 @@ static TokenType GetToken(int &pos, const char *exp, int *tokenpos)
 namespace leap { namespace lml
 {
 
-//|------------------------- Evaluator --------------------------------------
-//|--------------------------------------------------------------------------
+  //|------------------------- Evaluator ------------------------------------
+  //|------------------------------------------------------------------------
 
 
-//|///////////////////////// Evaluator::Constructor /////////////////////////
-Evaluator::Evaluator()
-{
-  m_hook = NULL;
-}
-
-
-//|///////////////////////// Evaluator::add_variable ////////////////////////
-///
-/// Add a variable into the evaluators namespace
-/// Variables are accessed in expressions as \@name
-///
-/// \param[in] name Variable Name
-/// \param[in] value Variable Value
-///
-void Evaluator::add_variable(const char *name, double value)
-{
-  //
-  // Check if variable already in variable list
-  //
-  for(size_t i = 0; i < m_variables.size(); ++i)
+  //|///////////////////////// Evaluator::Constructor ///////////////////////
+  Evaluator::Evaluator()
   {
-    if (strinpcmp(m_variables[i].name, name))
+    m_hook = NULL;
+  }
+
+
+  //|///////////////////////// Evaluator::add_variable //////////////////////
+  ///
+  /// Add a variable into the evaluators namespace
+  /// Variables are accessed in expressions as \@name
+  ///
+  /// \param[in] name Variable Name
+  /// \param[in] value Variable Value
+  ///
+  void Evaluator::add_variable(const char *name, double value)
+  {
+    //
+    // Check if variable already in variable list
+    //
+    for(size_t i = 0; i < m_variables.size(); ++i)
+    {
+      if (strinpcmp(m_variables[i].name, name))
+      {
+        //
+        // It was? Just update it's value
+        //
+        m_variables[i].value = value;
+        return;
+      }
+    }
+
+    VariableData vd;
+    strncpy(vd.name, name, sizeof(vd.name));
+    vd.value = value;
+
+    //
+    // Otherwise, Add in a new variable
+    //
+    m_variables.push_back(vd);
+  }
+
+
+  //|///////////////////////// Evaluator::remove_all_variables //////////////
+  ///
+  /// Removes all variables that have been defined
+  ///
+  void Evaluator::remove_all_variables()
+  {
+    m_variables.clear();
+  }
+
+
+  //|///////////////////////// Evaluator::define_evalhook ///////////////////
+  ///
+  /// Define a class implementing EvaluatorHook to evaluate variables
+  /// not defined through AddVariable()
+  ///
+  /// \param[in] hook Variable Callback Hook
+  ///
+  void Evaluator::define_evalhook(EvaluatorHook *hook)
+  {
+    m_hook = hook;
+  }
+
+
+  //|///////////////////////// Evaluator::eval_argument /////////////////////
+  //|
+  //| Evaluates an argument (after it's been extracted and splitted enough)
+  //| Will either convert text to a double or extract variable value
+  //|
+  double Evaluator::eval_argument(const char *arg) const
+  {
+    //
+    // Is it a variable
+    //
+    if (arg[0] == '@')
     {
       //
-      // It was? Just update it's value
+      // Find Variable in list and return value
       //
-      m_variables[i].value = value;
-      return;
+      for(size_t i = 0; i < m_variables.size(); ++i)
+        if (strinpcmp(m_variables[i].name, &arg[1]))
+          return m_variables[i].value;
+
+      //
+      // Not in list? See if the EvalHook can help us
+      //
+      if (m_hook != NULL)
+        return m_hook->eval_variable(arg);
+
+      return 0;
+    }
+    else
+    {
+      return atof(arg);
     }
   }
 
-  VariableData vd;
-  strncpy(vd.name, name, sizeof(vd.name));
-  vd.value = value;
 
-  //
-  // Otherwise, Add in a new variable
-  //
-  m_variables.push_back(vd);
-}
-
-
-//|///////////////////////// Evaluator::remove_all_variables ////////////////
-///
-/// Removes all variables that have been defined
-///
-void Evaluator::remove_all_variables()
-{
-  m_variables.clear();
-}
-
-
-//|///////////////////////// Evaluator::define_evalhook /////////////////////
-///
-/// Define a class implementing EvaluatorHook to evaluate variables
-/// not defined through AddVariable()
-///
-/// \param[in] hook Variable Callback Hook
-///
-void Evaluator::define_evalhook(EvaluatorHook *hook)
-{
-  m_hook = hook;
-}
-
-
-//|///////////////////////// Evaluator::eval_argument ///////////////////////
-//|
-//| Evaluates an argument (after it's been extracted and splitted enough)
-//| Will either convert text to a double or extract variable value
-//|
-double Evaluator::eval_argument(const char *arg) const
-{
-  //
-  // Is it a variable
-  //
-  if (arg[0] == '@')
+  //|///////////////////////// Evaluator::eval_expression ///////////////////
+  //|
+  //| Evaluates an expression by applying left operator right
+  //|
+  double Evaluator::eval_expression(double left, const char *op, double right) const
   {
     //
-    // Find Variable in list and return value
+    // Apply the operator
     //
-    for(size_t i = 0; i < m_variables.size(); ++i)
-      if (strinpcmp(m_variables[i].name, &arg[1]))
-        return m_variables[i].value;
+    switch(op[0])
+    {
+      case '+' :
+        return left + right;
 
-    //
-    // Not in list? See if the EvalHook can help us
-    //
-    if (m_hook != NULL)
-      return m_hook->eval_variable(arg);
+      case '-' :
+        return left - right;
+
+      case '*' :
+        return left * right;
+
+      case '/' :
+        return left / right;
+
+      case '%' :
+        return (int)left % (int)right;
+
+      case '&' :
+        return left && right;
+
+      case '|' :
+        return left || right;
+
+      case '=' :
+        return left == right;
+
+      case '!' :
+        return left != right;
+
+      case '<' :
+        if (op[1] == '=')
+          return left <= right;
+        else
+          return left < right;
+
+      case '>' :
+        if (op[1] == '=')
+          return left >= right;
+        else
+          return left > right;
+    }
+
+    if (strinpcmp("abs", op))
+      return abs(right);
 
     return 0;
   }
-  else
+
+
+  //|///////////////////////// Evaluator::evaluate //////////////////////////
+  ///
+  /// Evaluate a mathmatical expression (*, /, +, -)
+  ///
+  /// \param[in] expression The expression to Evaluate
+  ///
+  double Evaluator::evaluate(const char *expression) const
   {
-    return atof(arg);
-  }
-}
+    // Two Stacks
+    SimpleStack<int> OperatorStack;
+    SimpleStack<double> OperandStack;
 
+    int tkpos, pos = 0;
+    TokenType tktype;
+    UnaryMask unaryop = UnaryMask::NextUnary;
 
-//|///////////////////////// Evaluator::eval_expression /////////////////////
-//|
-//| Evaluates an expression by applying left operator right
-//|
-double Evaluator::eval_expression(double left, const char *op, double right) const
-{
-  //
-  // Apply the operator
-  //
-  switch(op[0])
-  {
-    case '+' :
-      return left + right;
-
-    case '-' :
-      return left - right;
-
-    case '*' :
-      return left * right;
-
-    case '/' :
-      return left / right;
-
-    case '%' :
-      return (int)left % (int)right;
-
-    case '&' :
-      return left && right;
-
-    case '|' :
-      return left || right;
-
-    case '=' :
-      return left == right;
-
-    case '!' :
-      return left != right;
-
-    case '<' :
-      if (op[1] == '=')
-        return left <= right;
-      else
-        return left < right;
-
-    case '>' :
-      if (op[1] == '=')
-        return left >= right;
-      else
-        return left > right;
-  }
-
-  if (strinpcmp("abs", op))
-    return abs(right);
-
-  return 0;
-}
-
-
-//|///////////////////////// Evaluator::evaluate ////////////////////////////
-///
-/// Evaluate a mathmatical expression (*, /, +, -)
-///
-/// \param[in] expression The expression to Evaluate
-///
-double Evaluator::evaluate(const char *expression) const
-{
-  // Two Stacks
-  SimpleStack<int> OperatorStack;
-  SimpleStack<double> OperandStack;
-
-  int tkpos, pos = 0;
-  TokenType tktype;
-  UnaryMask unaryop = UnaryMask::NextUnary;
-
-  //
-  // For each token
-  //
-  while ((tktype = GetToken(pos, expression, &tkpos)) != TokenType::NoToken)
-  {
-    switch(tktype)
+    //
+    // For each token
+    //
+    while ((tktype = GetToken(pos, expression, &tkpos)) != TokenType::NoToken)
     {
-      case TokenType::OpToken :
+      switch(tktype)
+      {
+        case TokenType::OpToken :
 
-        // Attempt to directly apply unary operators inline...
-        if (unaryop == UnaryMask::NextUnary && IsUnaryOp(&expression[tkpos]))
-        {
-          OperandStack.push(0);
-          OperatorStack.push(strlen(expression));
-          OperatorStack.push(tkpos);
+          // Attempt to directly apply unary operators inline...
+          if (unaryop == UnaryMask::NextUnary && IsUnaryOp(&expression[tkpos]))
+          {
+            OperandStack.push(0);
+            OperatorStack.push(strlen(expression));
+            OperatorStack.push(tkpos);
+            break;
+          }
+
+          while (true)
+          {
+            // Anything We Can Do ?
+            if (OperatorStack.size() == 0 || expression[tkpos] == '(')
+            {
+              OperatorStack.push(tkpos);
+              break;
+            }
+
+            // Ensure Higher Precedence Ops Done First...
+            if (GetPrecedence(&expression[OperatorStack.peek()]) > GetPrecedence(&expression[tkpos]))
+            {
+              OperatorStack.push(tkpos);
+              break;
+            }
+
+            // End of Bracketed Expression ?
+            if (expression[OperatorStack.peek()] == '(')
+            {
+              OperatorStack.pop();
+              break;
+            }
+
+            // End of Unary Expression ?
+            if (expression[OperatorStack.peek()] == 0)
+            {
+              OperatorStack.pop();
+              continue;
+            }
+
+            // Lets Actually Evaluate Something...
+            if (OperandStack.size() >= 2)
+            {
+              int op = OperatorStack.pop();
+              double right = OperandStack.pop();
+              double left = OperandStack.pop();
+
+              OperandStack.push(eval_expression(left, &expression[op], right));
+            }
+            else
+              break;
+          }
+
+          if (expression[tkpos] != '(' && expression[tkpos] != ')')
+            unaryop = UnaryMask::NextUnary;
+
           break;
-        }
 
-        while (true)
-        {
-          // Anything We Can Do ?
-          if (OperatorStack.size() == 0 || expression[tkpos] == '(')
-          {
-            OperatorStack.push(tkpos);
-            break;
-          }
+        case TokenType::ArgToken :
 
-          // Ensure Higher Precedence Ops Done First...
-          if (GetPrecedence(&expression[OperatorStack.peek()]) > GetPrecedence(&expression[tkpos]))
-          {
-            OperatorStack.push(tkpos);
-            break;
-          }
+          OperandStack.push(eval_argument(&expression[tkpos]));
 
-          // End of Bracketed Expression ?
-          if (expression[OperatorStack.peek()] == '(')
-          {
-            OperatorStack.pop();
-            break;
-          }
+          unaryop = UnaryMask::NoUnary;
 
-          // End of Unary Expression ?
-          if (expression[OperatorStack.peek()] == 0)
-          {
-            OperatorStack.pop();
-            continue;
-          }
+          break;
 
-          // Lets Actually Evaluate Something...
-          if (OperandStack.size() >= 2)
-          {
-            int op = OperatorStack.pop();
-            double right = OperandStack.pop();
-            double left = OperandStack.pop();
+        case TokenType::NoToken :
 
-            OperandStack.push(eval_expression(left, &expression[op], right));
-          }
-          else
-            break;
-        }
-
-        if (expression[tkpos] != '(' && expression[tkpos] != ')')
-          unaryop = UnaryMask::NextUnary;
-
-        break;
-
-      case TokenType::ArgToken :
-
-        OperandStack.push(eval_argument(&expression[tkpos]));
-
-        unaryop = UnaryMask::NoUnary;
-
-        break;
-
-      case TokenType::NoToken :
-
-        break;
+          break;
+      }
     }
-  }
 
-  //
-  // Finally, tidy up the stacks
-  //
-  while (OperatorStack.size() > 0)
-  {
-    int op = OperatorStack.pop();
-
-    if (expression[op] == '(' || expression[op] == 0)
-      op = OperatorStack.pop();
-
-    if (OperandStack.size() >= 2)
+    //
+    // Finally, tidy up the stacks
+    //
+    while (OperatorStack.size() > 0)
     {
-      double right = OperandStack.pop();
-      double left = OperandStack.pop();
+      int op = OperatorStack.pop();
 
-      OperandStack.push(eval_expression(left, &expression[op], right));
+      if (expression[op] == '(' || expression[op] == 0)
+        op = OperatorStack.pop();
+
+      if (OperandStack.size() >= 2)
+      {
+        double right = OperandStack.pop();
+        double left = OperandStack.pop();
+
+        OperandStack.push(eval_expression(left, &expression[op], right));
+      }
     }
-  }
 
-  // Return the Result
-  return (OperandStack.size() > 0) ? OperandStack.pop() : 0;
-}
+    // Return the Result
+    return (OperandStack.size() > 0) ? OperandStack.pop() : 0;
+  }
 
 } } // namespace lml

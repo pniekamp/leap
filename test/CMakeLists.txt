@@ -6,8 +6,8 @@ if(POLICY CMP0037)
   cmake_policy(SET CMP0037 OLD)
 endif(POLICY CMP0037)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
 if(MINGW)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mthreads")

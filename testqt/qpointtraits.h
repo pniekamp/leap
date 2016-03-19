@@ -1,8 +1,6 @@
 //
 // QPointF traits
 //
-// Copyright (C) Australian Maritime College
-//
 
 #ifndef QPOINTTRAITS_H
 #define QPOINTTRAITS_H
