@@ -110,7 +110,7 @@ void TestBasic()
   cout << "  distance: " << dist(Vec2{0.0, 0.0}, Vec2{0.0, 10.0}) << "\n";
   cout << "  angle: " << angle(Vec2{0.0, 0.0}, Vec2{10.0, 10.0})/pi<double>()*180 << "\n";
   cout << "  area2d: " << area(Vec2{0.0, 0.0}, Vec2{10.0, 0.0}, Vec2{5.0, 5.0}) << "\n";
-  cout << "  area3d: " << area(Vector3f{0.0, 0.0, 2.0}, Vector3f{10.0, 0.0, 2.0}, Vector3f{5.0, 5.0, 2.0}) << "\n";
+  cout << "  area3d: " << area(Vector3f{0.0f, 0.0f, 2.0f}, Vector3f{10.0f, 0.0f, 2.0f}, Vector3f{5.0f, 5.0f, 2.0f}) << "\n";
 
   if (!coincident(Vec2{2.5, 7.7}, Vec2{2.5, 7.7}))
     cout << "** Should be coincident\n";
@@ -119,7 +119,7 @@ void TestBasic()
   if (!collinear(Vec2{2.5, 1.0}, Vec2{5.0, 2.0}, Vec2{10.0, 4.0}))
     cout << "** Should be collinear 2d\n";
 
-  if (!collinear(Vector3f{2.5, 1.0, 2.0}, Vector3f{5.0, 2.0, 2.0}, Vector3f{10.0, 4.0, 2.0}))
+  if (!collinear(Vector3f{2.5f, 1.0f, 2.0f}, Vector3f{5.0f, 2.0f, 2.0f}, Vector3f{10.0f, 4.0f, 2.0f}))
     cout << "** Should be collinear 3d\n";
 
   if (orientation(Vec2{0.0, 0.0}, Vec2{5.0, 2.0}, Vec2{3.0, 4.0}) <= 0)
@@ -128,10 +128,10 @@ void TestBasic()
   if (quadrant(Vec2{1.0, 1.0}) != 0 || quadrant(Vec2{-1.0, 1.0}) != 1 || quadrant(Vec2{1.0, -1.0}) != 2 || quadrant(Vec2{-1.0, -1.0}) != 3)
     cout << "** Should be Four Quadrants\n";
 
-  cout << "  normal: " << normal(Vector3f{0.0, 0.0, 2.0}, Vector3f{5.0, 2.0, 2.0}, Vector3f{3.0, 4.0, 2.0}) << endl;
+  cout << "  normal: " << normal(Vector3f{0.0f, 0.0f, 2.0f}, Vector3f{5.0f, 2.0f, 2.0f}, Vector3f{3.0f, 4.0f, 2.0f}) << endl;
 
   auto a = nearest_on_segment(Vec2{0.0, 0.0}, Vec2{5.0, 2.0}, Vec2{3.0, 4.0});
-  auto b = nearest_on_segment(Vector3f{0.0, 0.0, 2.0}, Vector3f{5.0, 2.0, 2.0}, Vector3f{3.0, 4.0, 2.0});
+  auto b = nearest_on_segment(Vector3f{0.0f, 0.0f, 2.0f}, Vector3f{5.0f, 2.0f, 2.0f}, Vector3f{3.0f, 4.0f, 2.0f});
 
   if (a.x != b(0) || a.y != b(1))
     cout << "** Should be similar nearest points\n";

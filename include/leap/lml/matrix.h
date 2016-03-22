@@ -163,8 +163,8 @@ namespace leap { namespace lml
   template<typename Q, template<typename, size_t, size_t> class C>
   Matrix<T, M, N, B>::Matrix(Matrix<Q, M, N, C> const &other)
   {
-    for(size_type j = 0; j < N; ++j)
-      for(size_type i = 0; i < M; ++i)
+    for(size_type i = 0; i < M; ++i)
+      for(size_type j = 0; j < N; ++j)
         (*this)(i, j) = other(i, j);
   }
 
@@ -174,8 +174,8 @@ namespace leap { namespace lml
   template<typename Q, template<typename, size_t, size_t> class C>
   Matrix<T, M, N, B> &Matrix<T, M, N, B>::operator =(Matrix<Q, M, N, C> const &other)
   {
-    for(size_type j = 0; j < N; ++j)
-      for(size_type i = 0; i < M; ++i)
+    for(size_type i = 0; i < M; ++i)
+      for(size_type j = 0; j < N; ++j)
         (*this)(i, j) = other(i, j);
 
     return *this;
@@ -186,8 +186,8 @@ namespace leap { namespace lml
   template<size_t M, size_t N, typename Q, typename R, template<typename, size_t, size_t> class QB, template<typename, size_t, size_t> class RB>
   bool operator ==(Matrix<Q, M, N, QB> const &lhs, Matrix<R, M, N, RB> const &rhs)
   {
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         if (lhs(i, j) != rhs(i, j))
           return false;
 
@@ -225,8 +225,8 @@ namespace leap { namespace lml
   {
     T result = 0;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result += m(i, j) * m(i, j);
 
     return std::sqrt(result);
@@ -240,8 +240,8 @@ namespace leap { namespace lml
   {
     Matrix<T, M, N, B> result;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result(i, j) = m(i, j) * scalar;
 
     return result;
@@ -255,8 +255,8 @@ namespace leap { namespace lml
   {
     Matrix<T, N, M, B> result;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result(j, i) = m(i, j);
 
     return result;
@@ -300,8 +300,8 @@ namespace leap { namespace lml
     {
       Matrix<T, N-1, N-1, B> sub;
 
-      for(size_t jj = 0; jj < N-1; ++jj)
-        for(size_t ii = 0; ii < N-1; ++ii)
+      for(size_t ii = 0; ii < N-1; ++ii)
+        for(size_t jj = 0; jj < N-1; ++jj)
           sub(ii, jj) = m(ii + 1, jj + (jj >= k));
 
       result += ((k & 1) ? -1 : 1) * m(0, k)*determinant(sub);
@@ -326,8 +326,8 @@ namespace leap { namespace lml
       {
         Matrix<T, N-1, N-1, B> sub;
 
-        for(size_t jj = 0; jj < N-1; ++jj)
-          for(size_t ii = 0; ii < N-1; ++ii)
+        for(size_t ii = 0; ii < N-1; ++ii)
+          for(size_t jj = 0; jj < N-1; ++jj)
             sub(ii, jj) = m(ii + (ii >= j), jj + (jj >= i));
 
         result(i, j) = (((i+j) & 1) ? -1 : 1) * determinant(sub)*scale;
@@ -345,8 +345,8 @@ namespace leap { namespace lml
   {
     Matrix<T, M, N, B> result;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result(i, j) = std::abs(m(i, j));
 
     return result;
@@ -360,8 +360,8 @@ namespace leap { namespace lml
   {
     Matrix<T, M, N, B> result;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result(i, j) = m1(i, j) * m2(i, j);
 
     return result;
@@ -374,8 +374,8 @@ namespace leap { namespace lml
   {
     Matrix<T, M, N, B> result;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result(i, j) = m1(i, j) + m2(i, j);
 
     return result;
@@ -389,8 +389,8 @@ namespace leap { namespace lml
   {
     Matrix<T, M, N, B> result;
 
-    for(size_t j = 0; j < N; ++j)
-      for(size_t i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         result(i, j) = m1(i, j) - m2(i, j);
 
     return result;
@@ -404,9 +404,9 @@ namespace leap { namespace lml
   {
     Matrix<T, M, N, B> result;
 
-    for(size_t j = 0; j < N; ++j)
+    for(size_t i = 0; i < M; ++i)
     {
-      for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
       {
         result(i, j) = 0;
 

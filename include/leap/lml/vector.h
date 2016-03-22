@@ -66,7 +66,7 @@ namespace leap { namespace lml
       template<typename V>
       VectorView &operator /=(V &&v) { *this = *this / std::forward<V>(v); return *this; }
 
-      constexpr T const &operator[](size_t i) const { return *((T*)this + i); }
+      constexpr T const &operator[](size_t i) const { return *((T const *)this + i); }
       T &operator[](size_t i) { return *((T*)this + i); }
 
     protected:

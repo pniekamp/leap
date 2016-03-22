@@ -457,7 +457,7 @@ namespace leap
   };
 
   template<typename Func, typename... Args>
-  auto foldl(Args&&... args)
+  constexpr auto foldl(Args&&... args)
   {
     return fold_impl::foldl<Func>(std::forward<Args>(args)...);
   }
