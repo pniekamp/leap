@@ -314,10 +314,10 @@ namespace leap { namespace lml
 
     result(0, 0) = 2 / (right - left);
     result(1, 1) = 2 / (top - bottom);
-    result(2, 2) = -2 / (zfar - znear);
+    result(2, 2) = -1 / (zfar - znear);
     result(0, 3) = -(right + left) / (right - left);
     result(1, 3) = -(top + bottom) / (top - bottom);
-    result(2, 3) = -(zfar + znear) / (zfar - znear);
+    result(2, 3) = -znear / (zfar - znear);
     result(3, 3) = 1;
 
     return result;
@@ -341,9 +341,9 @@ namespace leap { namespace lml
 
     result(0, 0) = 1 / (aspect * tan(fov/2));
     result(1, 1) = 1 / tan(fov/2);
-    result(2, 2) = -(zfar + znear) / (zfar - znear);
+    result(2, 2) = -zfar / (zfar - znear);
     result(3, 2) = -1;
-    result(2, 3) = -2 * zfar * znear / (zfar - znear);
+    result(2, 3) = -zfar * znear / (zfar - znear);
 
     return result;
   }
@@ -357,9 +357,9 @@ namespace leap { namespace lml
     result(1, 1) = 2 * znear / (top - bottom);
     result(0, 2) = (right + left) / (right - left);
     result(1, 2) = (top + bottom) / (top - bottom);
-    result(2, 2) = -(zfar + znear) / (zfar - znear);
+    result(2, 2) = -zfar / (zfar - znear);
     result(3, 2) = -1;
-    result(2, 3) = -2 * zfar * znear / (zfar - znear);
+    result(2, 3) = -zfar * znear / (zfar - znear);
 
     return result;
   }
