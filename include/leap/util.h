@@ -463,6 +463,19 @@ namespace leap
   }
 
 
+  //|//////////// alignto ///////////////////////////////////////////////////
+  /**
+   * \brief returns the offset rounded up to alignment
+   * \ingroup leaputil
+  **/
+
+  template<typename T>
+  constexpr T alignto(T const &offset, T const &alignment)
+  {
+    return (offset + alignment - 1) & -alignment;
+  }
+
+
   //|//////////// extentof //////////////////////////////////////////////////
   /**
    * \brief returns the size of a basic array
