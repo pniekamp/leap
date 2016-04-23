@@ -303,6 +303,17 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// safenormalise ////////////////////////////////////
+  /// normalise a vector to a unit vector or return zero
+  template<typename Vector, typename T, size_t... Indices>
+  constexpr Vector safenormalise(VectorView<Vector, T, Indices...> const &v)
+  {
+    auto lengthsqr = normsqr(v);
+
+    return fcmp(lengthsqr, T(0)) ? Vector(T(0)) : scale(v, 1/std::sqrt(lengthsqr));
+  }
+
+
   //|///////////////////// abs //////////////////////////////////////////////
   /// elementwise abs
   template<typename Vector, typename T, size_t... Indices>

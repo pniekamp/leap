@@ -20,4 +20,6 @@
  *
  */
 
+#include "leap/util.h"
+
 #endif
