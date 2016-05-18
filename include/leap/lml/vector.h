@@ -347,6 +347,28 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// floor ////////////////////////////////////////////
+  /// elementwise floor
+  template<typename Vector, typename T, size_t... Indices>
+  constexpr Vector floor(VectorView<Vector, T, Indices...> const &v)
+  {
+    using std::floor;
+
+    return { floor(v[Indices])... };
+  }
+
+
+  //|///////////////////// ceil /////////////////////////////////////////////
+  /// elementwise ceil
+  template<typename Vector, typename T, size_t... Indices>
+  constexpr Vector ceil(VectorView<Vector, T, Indices...> const &v)
+  {
+    using std::ceil;
+
+    return { ceil(v[Indices])... };
+  }
+
+
   //|///////////////////// clamp ////////////////////////////////////////////
   /// elementwise clamp
   template<typename Vector, typename T, size_t... Indices>
