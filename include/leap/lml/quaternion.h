@@ -198,6 +198,24 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// rotation /////////////////////////////////////////
+  /// quaternion between two unit vectors
+  template<typename T, typename Vector, size_t... Indices, size_t... Jndices>
+  constexpr Quaternion<T> rotation(VectorView<Vector, T, Indices...> const &u, VectorView<Vector, T, Jndices...> const &v)
+  {
+    auto costheta = dot(u, v);
+
+    auto axis = cross(u, v);
+
+    if (costheta < -T(0.99))
+    {
+      axis = normalise((normsqr(cross(Vector{T(1), T(0), T(0)}, u)) < T(0.1)) ? cross(Vector{T(0), T(1), T(0)}, u) : cross(Vector{T(1), T(0), T(0)}, u));
+    }
+
+    return normalise(Quaternion<T>(1 + costheta, get<0>(axis), get<1>(axis), get<2>(axis)));
+  }
+
+
   //|///////////////////// Quaternion::slerp ////////////////////////////////
   /// Quaternion slerp
   template<typename T>
