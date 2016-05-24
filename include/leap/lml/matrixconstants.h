@@ -41,7 +41,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T, size_t M, size_t N>
-  Matrix<T, M, N> ZeroMatrix()
+  constexpr Matrix<T, M, N> ZeroMatrix()
   {
     return Matrix<T, M, N>(0);
   }
@@ -58,7 +58,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T, size_t N>
-  Matrix<T, N, N> IdentityMatrix()
+  constexpr Matrix<T, N, N> IdentityMatrix()
   {
     Matrix<T, N, N> result(0);
 
@@ -80,7 +80,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T>
-  Matrix<T, 2, 2> BasisMatrix(Vector<T, 2> const &i, Vector<T, 2> const &j)
+  constexpr Matrix<T, 2, 2> BasisMatrix(Vector<T, 2> const &i, Vector<T, 2> const &j)
   {
     Matrix<T, 2, 2> result;
 
@@ -93,7 +93,7 @@ namespace leap { namespace lml
   }
 
   template<typename T>
-  Matrix<T, 3, 3> BasisMatrix(Vector<T, 3> const &i, Vector<T, 3> const &j, Vector<T, 3> const &k)
+  constexpr Matrix<T, 3, 3> BasisMatrix(Vector<T, 3> const &i, Vector<T, 3> const &j, Vector<T, 3> const &k)
   {
     Matrix<T, 3, 3> result;
 
@@ -122,7 +122,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T>
-  Matrix<T, 2, 2> ScaleMatrix(T sx, T sy)
+  constexpr Matrix<T, 2, 2> ScaleMatrix(T sx, T sy)
   {
     Matrix<T, 2, 2> result(0);
 
@@ -133,7 +133,7 @@ namespace leap { namespace lml
   }
 
   template<typename T>
-  Matrix<T, 3, 3> ScaleMatrix(T sx, T sy, T sz)
+  constexpr Matrix<T, 3, 3> ScaleMatrix(T sx, T sy, T sz)
   {
     Matrix<T, 3, 3> result(0);
 
@@ -145,7 +145,7 @@ namespace leap { namespace lml
   }
 
   template<typename T, size_t N>
-  Matrix<T, N, N> ScaleMatrix(Vector<T, N> const &scaling)
+  constexpr Matrix<T, N, N> ScaleMatrix(Vector<T, N> const &scaling)
   {
     Matrix<T, N, N> result(0);
 
@@ -167,9 +167,9 @@ namespace leap { namespace lml
   **/
 
   template<typename T>
-  Matrix<T, 2, 2> RotationMatrix(T angle)
+  constexpr Matrix<T, 2, 2> RotationMatrix(T angle)
   {
-    Matrix<T, 2, 2> result;
+    Matrix<T, 2, 2> result = {};
 
     using std::cos;
     using std::sin;
@@ -183,9 +183,9 @@ namespace leap { namespace lml
   }
 
   template<typename T>
-  Matrix<T, 3, 3> RotationMatrix(Vector<T, 3> const &axis, T angle)
+  constexpr Matrix<T, 3, 3> RotationMatrix(Vector<T, 3> const &axis, T angle)
   {
-    Matrix<T, 3, 3> result;
+    Matrix<T, 3, 3> result = {};
 
     using std::cos;
     using std::sin;
@@ -208,9 +208,9 @@ namespace leap { namespace lml
   }
 
   template<typename T>
-  Matrix<T, 3, 3> RotationMatrix(Quaternion<T> const &q)
+  constexpr Matrix<T, 3, 3> RotationMatrix(Quaternion<T> const &q)
   {
-    Matrix<T, 3, 3> result;
+    Matrix<T, 3, 3> result = {};
 
     result(0, 0) = 1 - 2*q.y*q.y - 2*q.z*q.z;
     result(1, 0) = 2*q.x*q.y + 2*q.z*q.w;
@@ -237,7 +237,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T, size_t N, template<typename, size_t, size_t> class B>
-  Matrix<T, N+1, N+1, B> AffineMatrix(Matrix<T, N, N, B> const &linear, Vector<T, N> const &translation)
+  constexpr Matrix<T, N+1, N+1, B> AffineMatrix(Matrix<T, N, N, B> const &linear, Vector<T, N> const &translation)
   {
     Matrix<T, N+1, N+1, B> result;
 
@@ -268,7 +268,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T>
-  Matrix<T, 4, 4> LookAtMatrix(Vector<T, 3> const &eye, Vector<T, 3> const &target, Vector<T, 3> const &up)
+  constexpr Matrix<T, 4, 4> LookAtMatrix(Vector<T, 3> const &eye, Vector<T, 3> const &target, Vector<T, 3> const &up)
   {
     Matrix<T, 4, 4> result(0);
 
@@ -308,7 +308,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T>
-  Matrix<T, 4, 4> OrthographicProjection(T left, T bottom, T right, T top, T znear, T zfar)
+  constexpr Matrix<T, 4, 4> OrthographicProjection(T left, T bottom, T right, T top, T znear, T zfar)
   {
     Matrix<T, 4, 4> result(0);
 
@@ -335,7 +335,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T>
-  Matrix<T, 4, 4> PerspectiveProjection(T fov, T aspect, T znear, T zfar)
+  constexpr Matrix<T, 4, 4> PerspectiveProjection(T fov, T aspect, T znear, T zfar)
   {
     Matrix<T, 4, 4> result(0);
 
@@ -349,7 +349,7 @@ namespace leap { namespace lml
   }
 
   template<typename T>
-  Matrix<T, 4, 4> PerspectiveProjection(T left, T bottom, T right, T top, T znear, T zfar)
+  constexpr Matrix<T, 4, 4> PerspectiveProjection(T left, T bottom, T right, T top, T znear, T zfar)
   {
     Matrix<T, 4, 4> result(0);
 

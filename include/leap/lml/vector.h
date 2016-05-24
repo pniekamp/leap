@@ -454,6 +454,47 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// orthogonal ///////////////////////////////////////
+  /// orthogonal vector
+  template<typename Vector, typename T, size_t... Indices, std::enable_if_t<sizeof...(Indices) == 3>* = nullptr>
+  constexpr Vector orthogonal(VectorView<Vector, T, Indices...> const &u)
+  {
+    float x = std::abs(get<0>(u));
+    float y = std::abs(get<1>(u));
+    float z = std::abs(get<2>(u));
+
+    return cross(u, x < y ? (x < z ? Vector{T(1), T(0), T(0)} : Vector{T(0), T(0), T(1)}) : (y < z ? Vector{T(0), T(1), T(0)} : Vector{T(0), T(0), T(1)}));
+  }
+
+
+  //|///////////////////// orthogonal ///////////////////////////////////////
+  /// orthogonal vector
+  template<typename Vector, typename T, size_t... Indices, size_t... Jndices, std::enable_if_t<sizeof...(Indices) == 3>* = nullptr>
+  constexpr Vector orthogonal(VectorView<Vector, T, Indices...> const &u, VectorView<Vector, T, Jndices...> const &v)
+  {
+    auto axis = cross(u, v);
+
+    if (fcmp(normsqr(axis), T(0)))
+    {
+      axis = orthogonal(u);
+    }
+
+    return axis;
+  }
+
+
+  //|///////////////////// orthonormalise ////////////////////////////////////////////
+  /// orthogonalise & normalise u, v, generate w
+  template<typename Vector>
+  void orthonormalise(Vector &u, Vector &v, Vector &w)
+  {
+    w = orthogonal(u, v);
+    u = normalise(u - w * dot(w, u));
+    v = normalise(cross(w, u));
+    w = cross(u, v);
+  }
+
+
   //|///////////////////// theta ////////////////////////////////////////////
   /// spherical coordinates azimuthal angle of the vector
   template<typename Vector, typename T, size_t... Indices>

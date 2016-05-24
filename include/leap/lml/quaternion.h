@@ -205,12 +205,7 @@ namespace leap { namespace lml
   {
     auto costheta = dot(u, v);
 
-    auto axis = cross(u, v);
-
-    if (costheta < -T(0.99))
-    {
-      axis = normalise((normsqr(cross(Vector{T(1), T(0), T(0)}, u)) < T(0.1)) ? cross(Vector{T(0), T(1), T(0)}, u) : cross(Vector{T(1), T(0), T(0)}, u));
-    }
+    auto axis = orthogonal(u, v);
 
     return normalise(Quaternion<T>(1 + costheta, get<0>(axis), get<1>(axis), get<2>(axis)));
   }
