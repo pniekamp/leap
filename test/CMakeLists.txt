@@ -31,6 +31,7 @@ set(SRCS ${SRCS} util.cpp)
 set(SRCS ${SRCS} pathstring.cpp)
 set(SRCS ${SRCS} http.cpp)
 set(SRCS ${SRCS} geometry.cpp)
+set(SRCS ${SRCS} bound.cpp)
 set(SRCS ${SRCS} rtree.cpp)
 set(SRCS ${SRCS} array.cpp)
 

@@ -68,96 +68,6 @@ void DumpTest(Tree const &tree)
 }
 
 
-//|//////////////////// TestBound ///////////////////////////////////////////
-void TestBound()
-{
-  Bound2d A = make_bound(Vector2(0.0, 0.0), 0.0);
-
-  if (volume(A) != 0.0)
-    cout << "** Should Be Zero Area\n";
-
-  if (!contains(A, Vector2(0.0, 0.0)))
-    cout << "** Should Contain Zero\n";
-
-  Bound2d B = make_bound(Vector2(0.0, 0.0), 10.0);
-
-  if (!contains(B, Vector2(0.0, 0.0)))
-    cout << "** Should Contain Zero\n";
-
-  if (contains(B, Vector2(-50.0, 10.0)))
-    cout << "** Shouldn't Contain Coincident Top Point\n";
-
-  if (contains(B, Vector2(-50.0, -10.0)))
-    cout << "** Shouldn't Contain Coincident Bottom Point\n";
-
-  if (contains(B, Vector2(-50.0, 0.0)))
-    cout << "** Shouldn't Contain Coincident Middle Point\n";
-
-  if (contains(B, Vector2(50.0, 10.0)))
-    cout << "** Shouldn't Contain Coincident Top Point\n";
-
-  if (contains(B, Vector2(50.0, -10.0)))
-    cout << "** Shouldn't Contain Coincident Bottom Point\n";
-
-  if (contains(B, Vector2(50.0, 0.0)))
-    cout << "** Shouldn't Contain Coincident Middle Point\n";
-
-  if (!contains(B, Vector2(-10.0, 0.0)))
-    cout << "** Should Contain left\n";
-
-  if (!contains(B, Vector2(10.0, 0.0)))
-    cout << "** Should Contain right\n";
-
-  if (!contains(B, Vector2(0.0, -10.0)))
-    cout << "** Should Contain bottom\n";
-
-  if (!contains(B, Vector2(0.0, 10.0)))
-    cout << "** Should Contain top\n";
-
-  if (!contains(B, B))
-    cout << "** Should Contain itself\n";
-
-  if (!intersects(B, B))
-    cout << "** Should Overlap itself\n";
-
-  if (!contains(B, make_bound(Vector2(-10.0, 0.0), 0.0)))
-    cout << "** Should Contain left\n";
-
-  if (!contains(B, make_bound(Vector2(10.0, 0.0), 0.0)))
-    cout << "** Should Contain right\n";
-
-  if (!contains(B, make_bound(Vector2(0.0, -10.0), 0.0)))
-    cout << "** Should Contain bottom\n";
-
-  if (!contains(B, make_bound(Vector2(0.0, 10.0), 0.0)))
-    cout << "** Should Contain top\n";
-
-  if (!intersects(B, make_bound(Vector2(-10.0, 0.0), 0.0)))
-    cout << "** Should Overlap left\n";
-
-  if (!intersects(B, make_bound(Vector2(10.0, 0.0), 0.0)))
-    cout << "** Should Overlap right\n";
-
-  if (!intersects(B, make_bound(Vector2(0.0, -10.0), 0.0)))
-    cout << "** Should Overlap bottom\n";
-
-  if (!intersects(B, make_bound(Vector2(0.0, 10.0), 0.0)))
-    cout << "** Should Overlap top\n";
-
-  if (!intersects(B, make_bound(Vector2(-20.0, 0.0), 10.0)))
-    cout << "** Should Overlap left\n";
-
-  if (!intersects(B, make_bound(Vector2(20.0, 0.0), 10.0)))
-    cout << "** Should Overlap right\n";
-
-  if (!intersects(B, make_bound(Vector2(0.0, -20.0), 10.0)))
-    cout << "** Should Overlap bottom\n";
-
-  if (!intersects(B, make_bound(Vector2(0.0, 20.0), 10.0)))
-    cout << "** Should Overlap top\n";
-}
-
-
 //|//////////////////// RTreeTest1 //////////////////////////////////////////
 void RTreeTest1()
 {
@@ -283,8 +193,6 @@ void OcTreeTest()
 void RTreeTest()
 {
   cout << "Test RTree\n";
-
-  TestBound();
 
   RTreeTest1();
 

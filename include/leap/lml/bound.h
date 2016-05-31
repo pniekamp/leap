@@ -65,16 +65,16 @@ namespace leap { namespace lml
 
   //|///////////////////// BoundView low ////////////////////////////////////
   template<size_t i, typename Bound, typename T, size_t Stride, size_t... Indices>
-  constexpr auto const &low(BoundView<Bound, T, Stride, Indices...>  const &b) noexcept
+  constexpr auto const &low(BoundView<Bound, T, Stride, Indices...>  const &bound) noexcept
   {
-    return b[0][get<i>(index_sequence<Indices...>())];
+    return bound[0][get<i>(index_sequence<Indices...>())];
   }
 
   //|///////////////////// BoundView high ///////////////////////////////////
   template<size_t i, typename Bound, typename T, size_t Stride, size_t... Indices>
-  constexpr auto const &high(BoundView<Bound, T, Stride, Indices...>  const &b) noexcept
+  constexpr auto const &high(BoundView<Bound, T, Stride, Indices...>  const &bound) noexcept
   {
-    return b[1][get<i>(index_sequence<Indices...>())];
+    return bound[1][get<i>(index_sequence<Indices...>())];
   }
 
   // bound_view_for
@@ -281,6 +281,52 @@ namespace leap { namespace lml
     }
 
     return result;
+  }
+
+
+  //|///////////////////// intersection /////////////////////////////////////
+  /// intersection of bound and line segment
+  template<typename Point>
+  struct slabintersect : public leap::optional<Point>
+  {
+    coord_type_t<Point> tmin;
+    coord_type_t<Point> tmax;
+
+    bool ray() const { return tmax > std::max(tmin, coord_type_t<Point>(0)); }
+    bool seg() const { return tmax > std::max(tmin, coord_type_t<Point>(0)) && tmin < coord_type_t<Point>(1); }
+  };
+
+  template<typename Bound, typename Point, size_t... Indices>
+  auto intersection(Bound const &bound, Point const &a, Point const &b, index_sequence<Indices...>)
+  {
+    using T = coord_type_t<Point>;
+
+    slabintersect<Point> result;
+
+    auto t1 = std::array<T, bound.size()>{ ((low<Indices>(bound) - get<Indices>(a)) / (get<Indices>(b) - get<Indices>(a)))... };
+    auto t2 = std::array<T, bound.size()>{ ((high<Indices>(bound) - get<Indices>(a)) / (get<Indices>(b) - get<Indices>(a)))... };
+
+    result.tmin = std::min(t1[0], t2[0]);
+    result.tmax = std::max(t1[0], t2[0]);
+
+    for(size_t i = 1; i < bound.size(); ++i)
+    {
+      result.tmin = std::max(result.tmin, std::min(std::min(t1[i], t2[i]), result.tmax));
+      result.tmax = std::min(result.tmax, std::max(std::max(t1[i], t2[i]), result.tmin));
+    }
+
+    if (result.tmax > result.tmin)
+    {
+      result.emplace(a + (result.tmin < 0 ? result.tmax : result.tmin) * vec(a, b));
+    }
+
+    return result;
+  }
+
+  template<typename Bound, typename T, size_t IStride, size_t... Indices, typename Point>
+  auto intersection(BoundView<Bound, T, IStride, Indices...> const &bound, Point const &a, Point const &b)
+  {
+    return intersection(bound, a, b, make_index_sequence<0, bound.size()>());
   }
 
 

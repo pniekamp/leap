@@ -25,6 +25,7 @@ extern void UtilTest(); // util.cpp
 extern void PathStringTest(); // pathstring.cpp
 extern void HTTPTest(); // http.cpp
 extern void GeometryTest(); // geometry.cpp
+extern void BoundTest(); // bound.cpp
 extern void RTreeTest(); // rtree.cpp
 
 
@@ -62,6 +63,8 @@ int main(int /*argc*/, char */*args*/[])
     HTTPTest();
 
     GeometryTest();
+
+    BoundTest();
 
     RTreeTest();
   }
