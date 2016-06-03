@@ -555,7 +555,7 @@ namespace leap
 
       bool defined(const T *name) const;
 
-      string_type lookup(const T *name, const T *defval = "") const;
+      string_type lookup(const T *name, const T *defval = {}) const;
 
       string_type const &operator [](const T *name) const;
 

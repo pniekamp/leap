@@ -24,7 +24,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T, size_t N> class Vector;
-  template<typename Vector, typename T, size_t... Indices> struct VectorView;
+  template<typename Vector, typename T, size_t... Indices> class VectorView;
 
 
   //|//////////////////// operator << ///////////////////////////////////////

@@ -24,7 +24,7 @@ using namespace leap::threadlib;
 
 #ifdef _WIN32
 #  include <ws2tcpip.h>
-#  define ssize int
+#  define ssize_t int
 #  define socklen_t int
 #  define MSG_NOSIGNAL 0
 #  undef EMSGSIZE
@@ -47,6 +47,7 @@ using namespace leap::threadlib;
 #  include <signal.h>
 #  include <sys/ioctl.h>
 #  include <net/if.h>
+#  include <unistd.h>
 #  define INVALID_SOCKET -1
 #  define SOCKET_ERROR -1
 #  define HOSTENT hostent
@@ -1306,7 +1307,7 @@ namespace leap { namespace socklib
   ///
   /// \param[in] options string containing options
   ///
-  void BroadcastSocket::parse_options(const char */*options*/)
+  void BroadcastSocket::parse_options(const char *options)
   {
   }
 

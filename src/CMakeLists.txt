@@ -16,7 +16,7 @@ if(UNIX)
 endif(UNIX)
 
 if(WIN32)
-  add_definitions(-DWIN32_LEAN_AND_MEAN)
+  add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)
 endif(WIN32)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)

@@ -38,7 +38,7 @@ static void SimpleMatrixTest()
 
   for(size_t i = 0; i < P.rows(); ++i)
     for(size_t j = 0; j < P.columns(); ++j)
-      P(i, j) = i*10 + j;
+      P(i, j) = i*10.0f + j;
 
   if (P(0,0) != 0 || P(0,1) != 1 || P(0,2) != 2 || P(1,2) != 12 || P(2,1) != 21)
     cout << "** Set Error!\n";
@@ -182,7 +182,7 @@ static void MatrixConstantTest()
   auto R = RotationMatrix(Vector3(0.0f, 0.0f, 1.0f), 3.14f/2);
   cout << "  Rotation Matrix : " << R << "\n";
 
-  auto Q = RotationMatrix(Quaternion<float>(Vector3(0.0f, 0.0f, 1.0f), 3.14/2));
+  auto Q = RotationMatrix(Quaternion<float>(Vector3(0.0f, 0.0f, 1.0f), 3.14f/2));
   cout << "  Rotation Matrix : " << Q << "\n";
 
   cout << endl;

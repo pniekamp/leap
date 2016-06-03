@@ -91,7 +91,7 @@ void SAPStreamTest()
     cout << "\n";
   }
 
-  wstring b = L"Entry EntryID\n\{\nNAME = Wide Test\n}\n";
+  wstring b = L"Entry EntryID\n{\nNAME = Wide Test\n}\n";
 
   iwssapstream wsap(b);
 

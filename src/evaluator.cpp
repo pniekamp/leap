@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
+#include <algorithm>
 
 using namespace std;
 using namespace leap;

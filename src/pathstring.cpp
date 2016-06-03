@@ -16,10 +16,11 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
-#include <unistd.h>
 
 #ifdef _WIN32
 #  include <windows.h>
+#else
+#  include <unistd.h>
 #endif
 
 using namespace std;

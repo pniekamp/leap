@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cassert>
+#include <random>
 #include <mutex>
 
 using namespace std;
@@ -431,11 +432,11 @@ namespace
 
         case 9:  // Ping
           send_websocket_frame(socket, msg->payload().data()+s, bytes, 10, true, false);
-          msg->reserve_payload(-bytes);
+          msg->release_payload(bytes);
           break;
 
         case 10: // Pong
-          msg->reserve_payload(-bytes);
+          msg->release_payload(bytes);
           break;
 
         default:
@@ -518,7 +519,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPBase::add_payload ////////////////////////////
-  void HTTPBase::add_payload(const char *buffer, int bytes)
+  void HTTPBase::add_payload(const char *buffer, size_t bytes)
   {
     m_payload.reserve(m_payload.size() + bytes);
     m_payload.insert(m_payload.end(), buffer, buffer+bytes);
@@ -526,13 +527,21 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPBase::reserve_payload ////////////////////////
-  char *HTTPBase::reserve_payload(int bytes)
+  char *HTTPBase::reserve_payload(size_t bytes)
   {
     m_payload.resize(m_payload.size() + bytes);
 
     return m_payload.data() + m_payload.size() - bytes;
   }
 
+
+  //|///////////////////// HTTPBase::release_payload ////////////////////////
+  char *HTTPBase::release_payload(size_t bytes)
+  {
+    m_payload.resize(m_payload.size() - bytes);
+
+    return m_payload.data() + m_payload.size() + bytes;
+  }
 
 
   //|--------------------- HTTPRequest --------------------------------------
@@ -857,7 +866,7 @@ namespace leap { namespace socklib
           break;
       }
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
     }
 
@@ -952,7 +961,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// WebSocketMessage::add_payload ////////////////////
-  void WebSocketMessage::add_payload(const char *buffer, int bytes)
+  void WebSocketMessage::add_payload(const char *buffer, size_t bytes)
   {
     m_payload.reserve(m_payload.size() + bytes);
     m_payload.insert(m_payload.end(), buffer, buffer+bytes);
@@ -960,11 +969,20 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// WebSocketMessage::reserve_payload ////////////////
-  char *WebSocketMessage::reserve_payload(int bytes)
+  char *WebSocketMessage::reserve_payload(size_t bytes)
   {
     m_payload.resize(m_payload.size() + bytes);
 
     return m_payload.data() + m_payload.size() - bytes;
+  }
+
+
+  //|///////////////////// WebSocketMessage::release_payload ////////////////
+  char *WebSocketMessage::release_payload(size_t bytes)
+  {
+    m_payload.resize(m_payload.size() - bytes);
+
+    return m_payload.data() + m_payload.size() + bytes;
   }
 
 
@@ -1076,7 +1094,7 @@ namespace leap { namespace socklib
           return true;
         }
       }
-      catch(SocketBase::socket_error &e)
+      catch(SocketBase::socket_error &)
       {
       }
 
@@ -1097,7 +1115,7 @@ namespace leap { namespace socklib
     {
       return send_websocket_message(m_socket, buffer, bytes, 9, true, maskkey);
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
       m_socket.close();
     }
@@ -1116,7 +1134,7 @@ namespace leap { namespace socklib
     {
       return send_websocket_message(m_socket, message.payload().data(), message.payload().size(), static_cast<int>(message.type()), true, maskkey);
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
       m_socket.close();
     }
@@ -1135,7 +1153,7 @@ namespace leap { namespace socklib
     {
       return send_websocket_message(m_socket, buffer, bytes, 2, true, maskkey);
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
       m_socket.close();
     }
@@ -1156,7 +1174,7 @@ namespace leap { namespace socklib
 
       return read_websocket_message(m_socket, message, timeout);
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
       m_socket.close();
     }
@@ -1274,7 +1292,7 @@ namespace leap { namespace socklib
 
       return true;
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
     }
 
@@ -1314,7 +1332,7 @@ namespace leap { namespace socklib
 
       return true;
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
     }
 
@@ -1329,7 +1347,7 @@ namespace leap { namespace socklib
     {
       send_websocket_message(connection->socket, message.payload().data(), message.payload().size(), static_cast<int>(message.type()), false);
     }
-    catch(SocketBase::socket_error &e)
+    catch(SocketBase::socket_error &)
     {
     }
 
@@ -1354,7 +1372,7 @@ namespace leap { namespace socklib
       {
         send_websocket_message(connection->socket, message.payload().data(), message.payload().size(), static_cast<int>(message.type()), false);
       }
-      catch(SocketBase::socket_error &e)
+      catch(SocketBase::socket_error &)
       {
       }
     }
@@ -1526,7 +1544,7 @@ namespace leap { namespace socklib
 
           m_selectqueue.push(connection);
         }
-        catch(SocketBase::socket_error &e)
+        catch(SocketBase::socket_error &)
         {
           sigDisconnect(connection);
 

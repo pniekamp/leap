@@ -61,9 +61,10 @@ namespace leap { namespace socklib
       void add_header(std::string const &header);
 
       void add_payload(const std::string &buffer);
-      void add_payload(const char *buffer, int bytes);
+      void add_payload(const char *buffer, size_t bytes);
 
-      char *reserve_payload(int bytes);
+      char *reserve_payload(size_t bytes);
+      char *release_payload(size_t bytes);
 
     private:
 
@@ -199,9 +200,10 @@ namespace leap { namespace socklib
       void set_endpoint(std::string const &endpoint);
 
       void add_payload(const std::string &buffer);
-      void add_payload(const char *buffer, int bytes);
+      void add_payload(const char *buffer, size_t bytes);
 
-      char *reserve_payload(int bytes);
+      char *reserve_payload(size_t bytes);
+      char *release_payload(size_t bytes);
 
     private:
 
@@ -305,7 +307,7 @@ namespace leap { namespace socklib
 
   class HTTPServer
   {
-    struct Connection;
+    class Connection;
 
     public:
 

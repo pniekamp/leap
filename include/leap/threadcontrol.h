@@ -19,7 +19,6 @@
 #include <memory>
 #include <limits>
 #include <atomic>
-#include <unistd.h>
 
 /**
  * \namespace leap::threadlib

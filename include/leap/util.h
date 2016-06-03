@@ -22,6 +22,7 @@
 #include <iterator>
 #include <iomanip>
 #include <memory>
+#include <cctype>
 
 /**
  * \namespace leap
