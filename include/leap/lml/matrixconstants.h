@@ -82,7 +82,7 @@ namespace leap { namespace lml
   template<typename T>
   constexpr Matrix<T, 2, 2> BasisMatrix(Vector<T, 2> const &i, Vector<T, 2> const &j)
   {
-    Matrix<T, 2, 2> result;
+    Matrix<T, 2, 2> result = {};
 
     result(0, 0) = i(0);
     result(1, 0) = i(1);
@@ -95,7 +95,7 @@ namespace leap { namespace lml
   template<typename T>
   constexpr Matrix<T, 3, 3> BasisMatrix(Vector<T, 3> const &i, Vector<T, 3> const &j, Vector<T, 3> const &k)
   {
-    Matrix<T, 3, 3> result;
+    Matrix<T, 3, 3> result = {};
 
     result(0, 0) = i(0);
     result(1, 0) = i(1);
@@ -239,7 +239,7 @@ namespace leap { namespace lml
   template<typename T, size_t N, template<typename, size_t, size_t> class B>
   constexpr Matrix<T, N+1, N+1, B> AffineMatrix(Matrix<T, N, N, B> const &linear, Vector<T, N> const &translation)
   {
-    Matrix<T, N+1, N+1, B> result;
+    Matrix<T, N+1, N+1, B> result = {};
 
     for(size_t j = 0; j < N; ++j)
       for(size_t i = 0; i < N; ++i)
@@ -270,7 +270,7 @@ namespace leap { namespace lml
   template<typename T>
   constexpr Matrix<T, 4, 4> LookAtMatrix(Vector<T, 3> const &eye, Vector<T, 3> const &target, Vector<T, 3> const &up)
   {
-    Matrix<T, 4, 4> result(0);
+    Matrix<T, 4, 4> result = {};
 
     auto zaxis = normalise(eye - target);
     auto xaxis = normalise(cross(up, zaxis));

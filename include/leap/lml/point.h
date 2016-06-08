@@ -76,13 +76,13 @@ namespace leap { namespace lml
     };
 
     template<typename T>
-    struct detail<T, std::enable_if_t<point_traits<std::decay_t<T>>::dimension>>
+    struct detail<T, std::enable_if_t<point_traits<std::decay_t<T>>::dimension != 0>>
     {
       typedef typename std::decay_t<T> type;
     };
 
     template<typename T>
-    struct detail<T, std::enable_if_t<point_traits<std::decay_t<decltype(position(std::declval<T&>()))>>::dimension>>
+    struct detail<T, std::enable_if_t<point_traits<std::decay_t<decltype(position(std::declval<T&>()))>>::dimension != 0>>
     {
       typedef std::decay_t<decltype(position(std::declval<T&>()))> type;
     };

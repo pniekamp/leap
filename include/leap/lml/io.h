@@ -244,7 +244,7 @@ namespace leap { namespace lml
   **/
 
   template<typename T, size_t N> class Bound;
-  template<typename Bound, typename T, size_t Stride, size_t... Indices> struct BoundView;
+  template<typename Bound, typename T, size_t Stride, size_t... Indices> class BoundView;
 
 
   //|//////////////////// operator << ///////////////////////////////////////

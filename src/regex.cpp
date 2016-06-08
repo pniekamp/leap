@@ -622,8 +622,8 @@ namespace leap { namespace regex
         return true;
 
       const char *cs = str;
-      unsigned int c = 0;
-      unsigned int n = m_conditions.size();
+      size_t c = 0;
+      size_t n = m_conditions.size();
 
       while (state.substate.size() != n)
         state.substate.push_back(RegExState(state.context));
@@ -675,8 +675,8 @@ namespace leap { namespace regex
         return false;
 
       const char *cs = state.last+1;
-      unsigned int c = state.count * m_conditions.size();
-      unsigned int n = m_conditions.size();
+      size_t c = state.count * m_conditions.size();
+      size_t n = m_conditions.size();
 
       // Repeat not allowed or last instance used up no characters (don't repeat nulls infinetly)
       if (m_repeat != RepeatType::Once && (m_repeat != RepeatType::ZeroOrOnce || state.count == 0)

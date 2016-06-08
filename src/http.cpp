@@ -45,7 +45,7 @@ namespace
   {
     int step = 0;
 
-    function<int (StreamSocket &socket, size_t bytes, HTTPBase *msg)> callback =
+    function<size_t (StreamSocket &socket, size_t bytes, HTTPBase *msg)> callback =
       [](StreamSocket &socket, size_t bytes, HTTPBase *msg) {
         char *buffer = msg->reserve_payload(bytes);
 
@@ -279,9 +279,9 @@ namespace
 
 
   //|///////////////////// send_websocket_frame /////////////////////////////
-  bool send_websocket_frame(StreamSocket &socket, const void *buffer, int bytes, int opcode, bool fin, bool masked, uint32_t maskkey = 0)
+  bool send_websocket_frame(StreamSocket &socket, const void *buffer, size_t bytes, int opcode, bool fin, bool masked, uint32_t maskkey = 0)
   {
-    int len = 0;
+    size_t len = 0;
     uint8_t frame[16];
 
     frame[0] = (fin << 7) | (opcode << 0);
@@ -322,14 +322,14 @@ namespace
 
 
   //|///////////////////// send_websocket_message ///////////////////////////
-  bool send_websocket_message(StreamSocket &socket, const void *buffer, int bytes, int opcode, bool masked, uint32_t maskkey = 0)
+  bool send_websocket_message(StreamSocket &socket, const void *buffer, size_t bytes, int opcode, bool masked, uint32_t maskkey = 0)
   {
     return send_websocket_frame(socket, buffer, bytes, opcode, true, masked, maskkey);
   }
 
 
   //|///////////////////// read_websocket_frame /////////////////////////////
-  tuple<int, int, int> read_websocket_frame(StreamSocket &socket, WebSocketMessage *msg, int timeout)
+  tuple<int, int, size_t> read_websocket_frame(StreamSocket &socket, WebSocketMessage *msg, int timeout)
   {
     uint8_t head[2];
 
@@ -340,7 +340,7 @@ namespace
     int masked = (head[1] & 0x80) >> 7;
     int opcode = (head[0] & 0x0F);
 
-    int length = (head[1] & 0x7F);
+    size_t length = (head[1] & 0x7F);
 
     if (length == 126)
     {
@@ -364,9 +364,9 @@ namespace
       socket.receive(&maskkey, 4);
     }
 
-    for(int remaining = length; remaining > 0; )
+    for(size_t remaining = length; remaining > 0; )
     {
-      int bytes = min(remaining, 4096);
+      size_t bytes = min(remaining, (size_t)4096);
 
       if (!socket.wait_on_bytes(bytes, timeout))
         throw SocketBase::socket_error("Timeout Receiving Payload");
@@ -377,7 +377,7 @@ namespace
 
       if (masked && (maskkey[0] != 0 || maskkey[1] != 0 || maskkey[2] != 0 || maskkey[3] != 0))
       {
-        for(int i = 0; i < length; ++i)
+        for(size_t i = 0; i < length; ++i)
           ((uint8_t*)buffer)[i] ^= maskkey[length - remaining + i % 4];
       }
 
@@ -804,7 +804,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPClient::perform //////////////////////////////
-  bool HTTPClient::perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, std::function<int (StreamSocket &socket, size_t bytes, HTTPBase *msg)> const &callback)
+  bool HTTPClient::perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, std::function<size_t (StreamSocket &socket, size_t bytes, HTTPBase *msg)> const &callback)
   {
     response->clear();
 
@@ -1579,7 +1579,7 @@ namespace leap { namespace socklib
 
 
   //////////////////////////// base64_encode ////////////////////////////////
-  std::string base64_encode(const void *payload, unsigned long size)
+  std::string base64_encode(const void *payload, size_t size)
   {
     static const char encode[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

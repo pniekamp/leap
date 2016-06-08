@@ -159,7 +159,7 @@ namespace leap { namespace socklib
 
       class ConnectionPool;
 
-      static bool perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, std::function<int (StreamSocket &socket, size_t bytes, HTTPBase *msg)> const &callback);
+      static bool perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, std::function<size_t (StreamSocket &socket, size_t bytes, HTTPBase *msg)> const &callback);
   };
 
 
@@ -386,7 +386,7 @@ namespace leap { namespace socklib
 
   // base64
   std::string base64_encode(std::vector<uint8_t> const &payload);
-  std::string base64_encode(const void *payload, unsigned long size);
+  std::string base64_encode(const void *payload, size_t size);
   std::vector<uint8_t> base64_decode(std::string const &payload);
 
 } } // namespace socklib

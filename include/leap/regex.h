@@ -70,7 +70,7 @@ namespace leap { namespace regex
         const char *first;
         const char *last;
 
-        unsigned int count;
+        size_t count;
 
         bool grouped;
 
