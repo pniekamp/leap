@@ -46,6 +46,8 @@ class MainWindow : public QWidget
     double m_y;
     double m_scale;
 
+    double m_time;
+
     std::vector<QPointF> m_points;
 };
 
@@ -54,6 +56,8 @@ MainWindow::MainWindow()
   m_x = 0.0;
   m_y = 0.0;
   m_scale = 0.5;
+
+  m_time = 0.0f;
 
   resize(800, 600);
 
@@ -86,6 +90,8 @@ void MainWindow::wheelEvent(QWheelEvent *event)
 
 void MainWindow::timerEvent(QTimerEvent *event)
 {
+  m_time += 0.01;
+
   update();
 }
 
@@ -154,6 +160,16 @@ void MainWindow::paintEvent(QPaintEvent *event)
       painter.drawEllipse(translate(m_points[i], bezier.controls()[2*i]), 0.01, 0.01);
       painter.drawEllipse(translate(m_points[i+1], bezier.controls()[2*i+1]), 0.01, 0.01);
     }
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(0, 0, 164));
+
+    painter.drawEllipse(bezier.value(fmod(m_time, 1.0)), 0.01, 0.01);
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(0, 164, 0));
+
+    painter.drawEllipse(bezier.value(remap(bezier, fmod(m_time, 1.0)*bezier.length())), 0.01, 0.01);
   }
 }
 

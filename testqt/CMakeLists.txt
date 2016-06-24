@@ -15,14 +15,12 @@ if(CMAKE_SYSTEM_NAME MATCHES Linux)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 endif(CMAKE_SYSTEM_NAME MATCHES Linux)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -ffast-math")
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math")
 
 find_package(Threads REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
-find_package(Qt5OpenGL REQUIRED)
-find_package(Qt5Svg REQUIRED)
-find_package(Qt5Xml REQUIRED)
 
 find_path(LEAP_INCLUDE leap.h PATHS ../include NO_DEFAULT_PATH)
 find_library(LEAP_LIBRARIES NAMES leap PATHS ../lib)

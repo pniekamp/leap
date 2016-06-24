@@ -36,7 +36,7 @@ namespace leap { namespace lml
 
       typedef Point point_type;
       typedef coord_type_t<Point> value_type;
-      typedef leap::lml::Vector<value_type, 2> control_type;
+      typedef leap::lml::Vector<value_type, dim<Point>()> control_type;
 
     public:
       Bezier() = default;
@@ -44,6 +44,9 @@ namespace leap { namespace lml
       Bezier(std::vector<Point> points, std::vector<control_type> controls);
 
       Point value(float t) const;
+
+      value_type length() const;
+      value_type length(float t0, float t1) const;
 
     public:
 
@@ -111,29 +114,95 @@ namespace leap { namespace lml
   template<typename Point>
   Point Bezier<Point>::value(float t) const
   {
+    assert(m_points.size() >= 2);
     assert(m_controls.size() != 0);
 
-    size_t k = (size_t)(t * (m_points.size()-1));
+    size_t k = std::min((size_t)(t * (m_points.size()-1)), m_points.size()-2);
 
-    auto x0 = get<0>(m_points[k]);
-    auto x3 = get<0>(m_points[k+1]);
-    auto x1 = x0 + m_controls[k*2](0);
-    auto x2 = x3 + m_controls[k*2+1](0);
-
-    auto y0 = get<1>(m_points[k]);
-    auto y3 = get<1>(m_points[k+1]);
-    auto y1 = y0 + m_controls[k*2](1);
-    auto y2 = y3 + m_controls[k*2+1](1);
+    auto p0 = m_points[k];
+    auto p3 = m_points[k+1];
+    auto p1 = p0 + m_controls[k*2];
+    auto p2 = p3 + m_controls[k*2+1];
 
     auto u = t * (m_points.size()-1) - k;
     auto um1 = 1 - u;
     auto um13 = um1 * um1 * um1;
     auto u3 = u * u * u;
 
-    auto x = um13*x0 + 3*u*um1*um1*x1 + 3*u*u*um1*x2 + u3*x3;
-    auto y = um13*y0 + 3*u*um1*um1*y1 + 3*u*u*um1*y2 + u3*y3;
+    return um13*p0 + 3*u*um1*um1*p1 + 3*u*u*um1*p2 + u3*p3;
+  }
 
-    return { x, y };
+
+  //|///////////////////// Bezier::length ///////////////////////////////////
+  template<typename Point>
+  typename Bezier<Point>::value_type Bezier<Point>::length() const
+  {
+    return length(0.0f, 1.0f);
+  }
+
+
+  //|///////////////////// Bezier::length ///////////////////////////////////
+  template<typename Point>
+  typename Bezier<Point>::value_type Bezier<Point>::length(float t0, float t1) const
+  {
+    auto quadraticlength = [](Point const &p0, Point const &p1, Point const &p2) {
+      auto a0 = vec(p0, p1);
+      auto a1 = vec(2 * p1, p0 + p2);
+
+      auto c = 4 * dot(a1, a1);
+      auto b = 8 * dot(a0, a1);
+      auto a = 4 * dot(a0, a0);
+      auto q = 4 * a * c - b * b;
+
+      return fcmp(c, value_type(0)) ? 2 * norm(a0) : 0.25 * ((2*c + b) * std::sqrt(c + b + a) - b * std::sqrt(a)) / c + q * (std::log(2 * std::sqrt(c * (c + b + a)) + 2*c + b) - std::log(2 * std::sqrt(c * a) + b)) / (8 * std::pow(c, 1.5));
+    };
+
+    auto length = value_type(0);
+
+    size_t k0 = std::min((size_t)(t0 * (m_points.size()-1)), m_points.size()-2);
+    size_t k1 = std::min((size_t)(t1 * (m_points.size()-1)), m_points.size()-2);
+
+    for(size_t k = k0; k < k1; ++k)
+    {
+      auto p0 = m_points[k];
+      auto p3 = m_points[k+1];
+      auto p1 = p0 + m_controls[k*2];
+      auto p2 = p3 + m_controls[k*2+1];
+
+      length += quadraticlength(p0, (3 * p2 - p3 + 3 * p1 - p0) / 4, p3);
+    }
+
+    auto u = t1 * (m_points.size()-1) - k1;
+
+    auto p0 = m_points[k1];
+    auto p3 = value(t1);
+    auto p1 = (1-u)*p0 + u*(p0 + m_controls[k1*2]);
+    auto p2 = (1-u)*p1 + u*((1-u)*(p0 + m_controls[k1*2]) + u*(p3 + m_controls[k1*2+1]));
+
+    length += quadraticlength(p0, (3 * p2 - p3 + 3 * p1 - p0) / 4, p3);
+
+    return length;
+  }
+
+  //|///////////////////// remap ////////////////////////////////////
+  // distance parameterisation
+  template<typename Bezier>
+  float remap(Bezier const &bezier, float distance)
+  {
+    float tlo = 0.0f;
+    float thi = 1.0f;
+
+    while (thi - tlo > 0.001f)
+    {
+      float t = (tlo + thi) / 2;
+
+      if (bezier.length(0.0f, t) > distance)
+        thi = t;
+      else
+        tlo = t;
+    }
+
+    return (thi + tlo) / 2;
   }
 
 } // namespace lml
