@@ -23,6 +23,7 @@
 #include <typeinfo>
 #include <deque>
 #include <atomic>
+#include <cassert>
 
 /**
  * \namespace leap::threadlib
@@ -210,63 +211,73 @@ namespace leap { namespace threadlib
 
       int code() const { return m_opcode; }
 
-      size_t size() const { return m_parameters.size(); }
+      size_t size() const { return m_size; }
 
       template<typename T>
       T const &value(size_t i) const;
 
     private:
 
-      template<typename Q>
-      void add(Q &&p0);
-
-      template<typename Q, typename... Args>
-      void add(Q &&p0, Args&&...params);
-
-    private:
-
       class holderbase
       {
         public:
-
-          virtual ~holderbase()
-          {
-          }
+          virtual ~holderbase() = default;
 
           virtual const std::type_info &type() const = 0;
-
-          virtual holderbase *clone() const = 0;
       };
 
       template<typename T>
       class holder : public holderbase
       {
         public:
-
           template<typename Q>
           holder(Q &&value)
             : held(std::forward<Q>(value))
           {
           }
 
-          virtual const std::type_info &type() const
+          virtual std::type_info const &type() const
           {
             return typeid(T);
           }
 
-          virtual holder *clone() const
+          T held;
+      };
+
+      class containerbase
+      {
+        public:
+          virtual ~containerbase() = default;
+
+          virtual holderbase const *value(size_t index) const = 0;
+      };
+
+      template<typename... Args>
+      class container : public containerbase
+      {
+        public:
+          template<size_t... Indices>
+          container(Args&&... args, std::index_sequence<Indices...>)
+            : held(std::forward<Args>(args)...),
+              heldbase{&std::get<Indices>(held)...}
           {
-            return new holder(held);
           }
 
-          T held;
+          virtual holderbase const *value(size_t index) const
+          {
+            return heldbase[index];
+          }
+
+          std::tuple<holder<std::decay_t<Args>>...> held;
+          std::array<holderbase*, sizeof...(Args)> heldbase;
       };
 
     private:
 
       int m_opcode;
 
-      std::vector<std::unique_ptr<holderbase>> m_parameters;
+      size_t m_size;
+      std::unique_ptr<containerbase> m_parameters;
   };
 
 
@@ -275,34 +286,17 @@ namespace leap { namespace threadlib
   inline ArgPack::ArgPack(int opcode)
     : m_opcode(opcode)
   {
+    m_size = 0;
   }
 
 
   //|///////////////////// ArgPack::Constructor /////////////////////////////
   template<typename... Args>
-  ArgPack::ArgPack(int opcode, Args&&...params)
+  ArgPack::ArgPack(int opcode, Args&&...args)
     : m_opcode(opcode)
   {
-    m_parameters.reserve(sizeof...(params));
-
-    add(std::forward<Args>(params)...);
-  }
-
-
-  //|///////////////////// ArgPack::add /////////////////////////////////////
-  template<typename Q>
-  void ArgPack::add(Q &&p0)
-  {
-    m_parameters.push_back(std::unique_ptr<holderbase>(new holder<std::decay_t<Q>>(std::forward<Q>(p0))));
-  }
-
-
-  //|///////////////////// ArgPack::add /////////////////////////////////////
-  template<typename Q, typename... Args>
-  void ArgPack::add(Q &&p0, Args&&...params)
-  {
-    add(std::forward<Q>(p0));
-    add(std::forward<Args>(params)...);
+    m_size = sizeof...(args);
+    m_parameters = std::unique_ptr<containerbase>(new container<Args...>(std::forward<Args>(args)..., std::make_index_sequence<sizeof...(Args)>()));
   }
 
 
@@ -310,10 +304,10 @@ namespace leap { namespace threadlib
   template<typename T>
   T const &ArgPack::value(size_t i) const
   {
-    if (m_parameters[i-1]->type() != typeid(T))
-      throw std::bad_cast();
+    assert(0 < i && i <= m_size);
+    assert(m_parameters->value(i-1)->type() == typeid(T));
 
-    return static_cast<holder<T>*>(m_parameters[i-1].get())->held;
+    return static_cast<holder<T> const *>(m_parameters->value(i-1))->held;
   }
 
 
