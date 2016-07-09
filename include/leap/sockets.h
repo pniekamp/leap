@@ -101,13 +101,11 @@ namespace leap { namespace socklib
         Dead         // socket incapable of connection
       };
 
-      //-------------------------- socket_error -----------------------------
-      //---------------------------------------------------------------------
       class socket_error : public std::runtime_error
       {
         public:
           socket_error(std::string const &arg)
-            : runtime_error(arg)
+            : std::runtime_error(arg)
           {
           }
       };
@@ -339,13 +337,11 @@ namespace leap { namespace socklib
   {
     public:
 
-      //-------------------------- socketpump_error -------------------------
-      //---------------------------------------------------------------------
       class socketpump_error : public std::runtime_error
       {
         public:
           socketpump_error(std::string const &arg)
-            : runtime_error(arg)
+            : std::runtime_error(arg)
           {
           }
       };

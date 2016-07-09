@@ -15,6 +15,7 @@ extern void ArrayTest();  // array.cpp
 extern void VectorTest();  // vector.cpp
 extern void MatrixTest();  // matrix.cpp
 extern void SwizzleTest();  // swizzle.cpp
+extern void EvaluatorTest();  // evaluator.cpp
 extern void InterpolatorTest();  // interpolator.cpp
 extern void SigLibTest(); // siglib.cpp
 extern void SAPStreamTest(); // sapstream.cpp
@@ -30,7 +31,7 @@ extern void RTreeTest(); // rtree.cpp
 
 
 //|//////////////////// TestSet /////////////////////////////////////////////
-int main(int /*argc*/, char */*args*/[])
+int main(int argc, char *args[])
 {
   cout << "libLeap Test Routines\n\n";
 
@@ -43,6 +44,8 @@ int main(int /*argc*/, char */*args*/[])
     MatrixTest();
 
     SwizzleTest();
+
+    EvaluatorTest();
 
     InterpolatorTest();
 

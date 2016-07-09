@@ -13,16 +13,18 @@
 //
 
 #include "leap/lml/evaluator.h"
+#include "leap/util.h"
 #include <cctype>
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <cassert>
 
 using namespace std;
 using namespace leap;
 
-const unsigned int kStackSize = 64;
+const size_t StackSize = 64;
 
 enum class TokenType
 {
@@ -31,252 +33,253 @@ enum class TokenType
   ArgToken,
 };
 
-enum class UnaryMask
+enum class OpType
 {
-  NoUnary = -2,
-  NextUnary = -1,
+  NoOp,
+  PrefixOp,
+  InfixOp
 };
 
-const char *UnaryOps = "+ - abs";
-const char *Operators[] = { "% / * abs", "+ -", "<= >= > <", "== != =", "&& || & |", "( )", "" };
-
-
-//|---------- SimpleStack ----------
-//|---------------------------------
-template<typename T>
-class SimpleStack
+enum class OpCode
 {
-  public:
-    SimpleStack()
-    {
-      m_head = 0;
-    }
-
-    size_t size()
-    {
-      return m_head;
-    }
-
-    T peek()
-    {
-      return m_stack[m_head-1];
-    }
-
-    T pop()
-    {
-      return m_stack[--m_head];
-    }
-
-    void push(T const &obj)
-    {
-      if (m_head < kStackSize)
-        m_stack[m_head++] = obj;
-    }
-
-  protected:
-
-    size_t m_head;
-    T m_stack[kStackSize];
+  comma, mod, div, mul, abs, sin, cos, tan, asin, acos, atan, atan2, pow, sqrt, log, exp, log2, exp2, cond, plus, minus, leq, geq, le, ge, eq, neq, bnot, band, bor, open, close
 };
 
+const char *Operators[] = { ",", "% / * abs sin cos tan asin acos atan atan2 pow sqrt log exp log2 exp2 if", "+ -", "<= >= < >", "== !=", "! && ||", "( )", "" };
 
-
-//|///////////////////////// strinpcmp //////////////////////////////////////
-//|
-//| Compares two string in a case insensitive manner
-//| The first string determines the compare length
-//|
-static bool strinpcmp(const char *str1, const char *str2)
+namespace
 {
-  while (tolower(*str1) == tolower(*str2) && *str1 != 0)
+  //|---------- SimpleStack ----------
+  //|---------------------------------
+  template<typename T>
+  class SimpleStack
   {
-    ++str1;
-    ++str2;
-  }
+    public:
+      SimpleStack()
+      {
+        m_head = 0;
+      }
 
-  return (*str1 == 0);
-}
+      size_t size()
+      {
+        return m_head;
+      }
+
+      T peek()
+      {
+        return m_stack[m_head-1];
+      }
+
+      T pop()
+      {
+        return m_stack[--m_head];
+      }
+
+      void push(T const &obj)
+      {
+        assert(m_head < StackSize);
+
+        if (m_head < StackSize)
+          m_stack[m_head++] = obj;
+      }
+
+    protected:
+
+      size_t m_head;
+      T m_stack[StackSize];
+  };
 
 
-//|///////////////////////// IsOperator /////////////////////////////////////
-//|
-//| Determine if character c is an operator
-//|
-static int IsOperator(const char *c)
-{
-  for(int i = 0; Operators[i][0] != 0; ++i)
-    for(int j = 0; Operators[i][j] != 0; ++j)
+  //|///////////////////////// is_operator //////////////////////////////////
+  int is_operator(const char *c)
+  {
+    for(int i = 0; Operators[i][0] != 0; ++i)
     {
-      // Is it this op ?
-      int k;
-      for(k = 0; Operators[i][j+k] == *c && *c > ' '; k++, c++)
-        ;
+      for(int j = 0; Operators[i][j] != 0; ++j)
+      {
+        int k;
+        for(k = 0; Operators[i][j+k] == c[k] && Operators[i][j+k] > ' '; k++)
+          ;
 
-      if (k != 0)
-        return k;
+        if (Operators[i][j+k] <= ' ')
+          return k;
 
-      // Skip to next op
-      for(++j; Operators[i][j] > ' '; ++j)
-        ;
+        // Skip to next op
+        for( ; Operators[i][j+1] != 0 && Operators[i][j] != ' '; ++j)
+          ;
+      }
     }
 
-  return 0;
-}
+    return 0;
+  }
 
 
-//|///////////////////////// IsUnaryOp //////////////////////////////////////
-//|
-//| Determine if character c is a uanry operator
-//|
-static int IsUnaryOp(const char *c)
-{
-  for(int i = 0; UnaryOps[i] != 0; ++i)
+  //|///////////////////////// is_argument ////////////////////////////////////
+  size_t is_argument(const char *c)
   {
-    // Is it this op ?
-    int k;
-    for(k = 0; UnaryOps[i+k] == *c && *c > ' '; k++, c++)
+    size_t k = 0;
+
+    if (isdigit(*c) || *c == '.')
+    {
+      // number
+      while (isdigit(*c) || *c == '.')
+      {
+        ++k;
+        ++c;
+      }
+
+      if (tolower(*c) == 'e')
+      {
+        while (tolower(*c) == 'e' || *c == '-' || *c == '+')
+        {
+          ++k;
+          ++c;
+        }
+
+        while (isdigit(*c))
+        {
+          ++k;
+          ++c;
+        }
+      }
+    }
+    else
+    {
+      // alpha
+      while (isdigit(*c) || isalpha(*c) || *c == '@' || *c == '$' || *c == '_' || *c == '.' || *c == '{' || *c == '}')
+      {
+        ++k;
+        ++c;
+      }
+
+      if (*c == '[')
+      {
+        ++k;
+        ++c;
+
+        while (*c != 0 && *(c-1) != ']')
+        {
+          ++k;
+          ++c;
+        }
+      }
+    }
+
+    return k;
+  }
+
+
+  //|///////////////////////// next_token ///////////////////////////////////
+  TokenType next_token(size_t &pos, const char *exp, size_t *tokenpos, size_t *tokenlen)
+  {
+    for( ; exp[pos] != 0 && exp[pos] <= ' '; ++pos)
       ;
 
-    if (k != 0)
-      return k;
+    size_t opcnt = is_operator(&exp[pos]);
+    size_t agcnt = is_argument(&exp[pos]);
 
-    // Skip to next op
-    for(++i; UnaryOps[i] > ' '; ++i)
-      ;
+    *tokenpos = pos;
+
+    pos += max(opcnt, agcnt);
+
+    *tokenlen = pos - *tokenpos;
+
+    if (opcnt > 0 && opcnt >= agcnt)
+      return TokenType::OpToken;
+
+    if (agcnt > 0)
+      return TokenType::ArgToken;
+
+    return TokenType::NoToken;
   }
 
-  return 0;
-}
 
-
-//|///////////////////////// IsArgument /////////////////////////////////////
-//|
-//| Determine if character c is an argument (number or variable)
-//|
-static int IsArgument(const char *c)
-{
-  int k = 0;
-
-  if (isdigit(*c) || *c == '.')
+  //|///////////////////////// make_operator ////////////////////////////////
+  void make_operator(int *code, int *order, int *precedence, const char *c, OpType type)
   {
-    // number
-    while (isdigit(*c) || *c == '.')
-    {
-      ++k;
-      ++c;
-    }
+    *code = 0;
 
-    if (tolower(*c) == 'e')
+    for(int i = 0; Operators[i][0] != 0; ++i)
     {
-      while (tolower(*c) == 'e' || *c == '-' || *c == '+')
+      for(int j = 0; Operators[i][j] != 0; ++j)
       {
-        ++k;
-        ++c;
-      }
+        int k;
+        for(k = 0; Operators[i][j+k] == c[k] && Operators[i][j+k] > ' '; k++)
+          ;
 
-      while (isdigit(*c))
-      {
-        ++k;
-        ++c;
+        if (Operators[i][j+k] <= ' ')
+        {
+          *order = 0;
+          *precedence = i;
+
+          if (type == OpType::InfixOp)
+          {
+            *order = 2;
+          }
+
+          if (type == OpType::PrefixOp)
+          {
+            switch(static_cast<OpCode>(*code))
+            {
+              case OpCode::plus:
+              case OpCode::minus:
+              case OpCode::abs:
+              case OpCode::sin:
+              case OpCode::cos:
+              case OpCode::tan:
+              case OpCode::asin:
+              case OpCode::acos:
+              case OpCode::atan:
+              case OpCode::sqrt:
+              case OpCode::log:
+              case OpCode::exp:
+              case OpCode::log2:
+              case OpCode::exp2:
+              case OpCode::bnot:
+                *order = 1;
+                break;
+
+              case OpCode::atan2:
+              case OpCode::pow:
+                *order = 2;
+                break;
+
+              case OpCode::cond:
+                *order = 3;
+                break;
+
+              default:
+                break;
+            }
+          }
+
+          return;
+        }
+
+        // Skip to next op
+        for( ; Operators[i][j+1] != 0 && Operators[i][j] != ' '; ++j)
+          ;
+
+        *code += 1;
       }
     }
   }
-  else
-  {
-    // alpha
-    while (isdigit(*c) || isalpha(*c) || *c == '@' || *c == '_' || *c == '.')
-    {
-      ++k;
-      ++c;
-    }
 
-    if (*c == '[')
-    {
-      ++k;
-      ++c;
-
-      while (*c != 0 && *(c-1) != ']')
-      {
-        ++k;
-        ++c;
-      }
-    }
-  }
-
-  return k;
 }
-
-
-//|///////////////////////// GetPrecedence //////////////////////////////////
-//|
-//| Determine operator precedence
-//|
-static int GetPrecedence(const char *op)
-{
-  for(int i = 0; Operators[i][0] != 0; ++i)
-  {
-    for(int j = 0; Operators[i][j] != 0; ++j)
-    {
-      if (*op == Operators[i][j])
-        return i;
-
-      for( ; Operators[i][j+1] != 0 && Operators[i][j] != ' '; ++j)
-        ;
-    }
-  }
-
-  return -1;
-}
-
-
-
-//|///////////////////////// GetToken ///////////////////////////////////////
-//|
-//| Retreives the next token from an expresion
-//| Tokens are defined as expressions seperated by operators
-//| or operaters themselves
-//|
-static TokenType GetToken(int &pos, const char *exp, int *tokenpos)
-{
-  // Skip Whitespaces...
-  for( ; exp[pos] != 0 && exp[pos] <= ' '; ++pos)
-    ;
-
-  // Get Token Size
-  int opcnt = IsOperator(&exp[pos]);
-  int agcnt = IsArgument(&exp[pos]);
-
-  // set token pos
-  *tokenpos = pos;
-
-  pos += max(opcnt, agcnt);
-
-  if (opcnt > 0)
-    return TokenType::OpToken;
-
-  if (agcnt > 0)
-    return TokenType::ArgToken;
-
-  return TokenType::NoToken;
-}
-
 
 namespace leap { namespace lml
 {
 
-  //|------------------------- Evaluator ------------------------------------
+  //|---------------------- Evaluator ---------------------------------------
   //|------------------------------------------------------------------------
 
-
-  //|///////////////////////// Evaluator::Constructor ///////////////////////
+  //|////////////////////// Evaluator::Constructor //////////////////////////
   Evaluator::Evaluator()
   {
-    m_hook = NULL;
   }
 
 
-  //|///////////////////////// Evaluator::add_variable //////////////////////
-  ///
+  //|////////////////////// Evaluator::add_variable /////////////////////////
   /// Add a variable into the evaluators namespace
   /// Variables are accessed in expressions as \@name
   ///
@@ -285,34 +288,30 @@ namespace leap { namespace lml
   ///
   void Evaluator::add_variable(const char *name, double value)
   {
-    //
-    // Check if variable already in variable list
-    //
+    size_t len = strlen(name);
+
+    if (len >= sizeof(Variable::name))
+      throw eval_error("name length overflow");
+
     for(size_t i = 0; i < m_variables.size(); ++i)
     {
-      if (strinpcmp(m_variables[i].name, name))
+      if (stricmp(m_variables[i].name, name) == 0)
       {
-        //
-        // It was? Just update it's value
-        //
-        m_variables[i].value = value;
+        m_variables[i].value = { value };
         return;
       }
     }
 
-    VariableData vd;
-    strncpy(vd.name, name, sizeof(vd.name));
-    vd.value = value;
+    Variable variable;
+    variable.len = len;
+    strncpy(variable.name, name, sizeof(variable.name));
+    variable.value = { value };
 
-    //
-    // Otherwise, Add in a new variable
-    //
-    m_variables.push_back(vd);
+    m_variables.push_back(variable);
   }
 
 
-  //|///////////////////////// Evaluator::remove_all_variables //////////////
-  ///
+  //|////////////////////// Evaluator::remove_all_variables /////////////////
   /// Removes all variables that have been defined
   ///
   void Evaluator::remove_all_variables()
@@ -321,228 +320,301 @@ namespace leap { namespace lml
   }
 
 
-  //|///////////////////////// Evaluator::define_evalhook ///////////////////
-  ///
+  //|////////////////////// Evaluator::define_evalhook //////////////////////
   /// Define a class implementing EvaluatorHook to evaluate variables
   /// not defined through AddVariable()
   ///
   /// \param[in] hook Variable Callback Hook
   ///
-  void Evaluator::define_evalhook(EvaluatorHook *hook)
+  void Evaluator::define_evalhook(double(*hook)(Evaluator const &, const char *, size_t))
   {
     m_hook = hook;
   }
 
 
-  //|///////////////////////// Evaluator::eval_argument /////////////////////
-  //|
-  //| Evaluates an argument (after it's been extracted and splitted enough)
-  //| Will either convert text to a double or extract variable value
-  //|
-  double Evaluator::eval_argument(const char *arg) const
+  //|////////////////////// Evaluator::eval_argument ////////////////////////
+  Evaluator::Operand Evaluator::eval_argument(const char *arg, size_t len) const
   {
-    //
-    // Is it a variable
-    //
-    if (arg[0] == '@')
+    if (isdigit(*arg) || *arg == '.')
     {
-      //
-      // Find Variable in list and return value
-      //
-      for(size_t i = 0; i < m_variables.size(); ++i)
-        if (strinpcmp(m_variables[i].name, &arg[1]))
-          return m_variables[i].value;
-
-      //
-      // Not in list? See if the EvalHook can help us
-      //
-      if (m_hook != NULL)
-        return m_hook->eval_variable(arg);
-
-      return 0;
+      return { atof(arg) };
     }
-    else
+
+    for(size_t i = 0; i < m_variables.size(); ++i)
     {
-      return atof(arg);
+      if (m_variables[i].len == len && strincmp(m_variables[i].name, arg, len) == 0)
+        return m_variables[i].value;
+    }
+
+    if (m_hook)
+    {
+      return { m_hook(*this, arg, len) };
+    }
+
+    throw eval_error("unknown variable");
+  }
+
+
+  //|////////////////////// Evaluator::eval_expression //////////////////////
+  Evaluator::Operand Evaluator::eval_expression(Operator op, Operand first) const
+  {
+    switch(static_cast<OpCode>(op.code))
+    {
+      case OpCode::plus:
+        return { first.value };
+
+      case OpCode::minus:
+        return { -first.value };
+
+      case OpCode::abs:
+        return { abs(first.value) };
+
+      case OpCode::sin:
+        return { sin(first.value) };
+
+      case OpCode::cos:
+        return { cos(first.value) };
+
+      case OpCode::tan:
+        return { tan(first.value) };
+
+      case OpCode::asin:
+        return { asin(first.value) };
+
+      case OpCode::acos:
+        return { acos(first.value) };
+
+      case OpCode::atan:
+        return { atan(first.value) };
+
+      case OpCode::sqrt:
+        return { sqrt(first.value) };
+
+      case OpCode::log:
+        return { log(first.value) };
+
+      case OpCode::exp:
+        return { exp(first.value) };
+
+      case OpCode::log2:
+        return { log2(first.value) };
+
+      case OpCode::exp2:
+        return { exp2(first.value) };
+
+      case OpCode::bnot:
+        return { double(fcmp(first.value, 0.0)) };
+
+      default:
+        throw eval_error("invalid operator");
     }
   }
 
 
-  //|///////////////////////// Evaluator::eval_expression ///////////////////
-  //|
-  //| Evaluates an expression by applying left operator right
-  //|
-  double Evaluator::eval_expression(double left, const char *op, double right) const
+  //|////////////////////// Evaluator::eval_expression //////////////////////
+  Evaluator::Operand Evaluator::eval_expression(Operator op, Operand second, Operand first) const
   {
-    //
-    // Apply the operator
-    //
-    switch(op[0])
+    switch(static_cast<OpCode>(op.code))
     {
-      case '+' :
-        return left + right;
+      case OpCode::mod:
+        return { fmod(first.value, second.value) };
 
-      case '-' :
-        return left - right;
+      case OpCode::div:
+        return { first.value / second.value };
 
-      case '*' :
-        return left * right;
+      case OpCode::mul:
+        return { first.value * second.value };
 
-      case '/' :
-        return left / right;
+      case OpCode::plus:
+        return { first.value + second.value };
 
-      case '%' :
-        return (int)left % (int)right;
+      case OpCode::minus:
+        return { first.value - second.value };
 
-      case '&' :
-        return left && right;
+      case OpCode::leq:
+        return { double(first.value <= second.value) };
 
-      case '|' :
-        return left || right;
+      case OpCode::geq:
+        return { double(first.value >= second.value) };
 
-      case '=' :
-        return left == right;
+      case OpCode::le:
+        return { double(first.value < second.value) };
 
-      case '!' :
-        return left != right;
+      case OpCode::ge:
+        return { double(first.value > second.value) };
 
-      case '<' :
-        if (op[1] == '=')
-          return left <= right;
-        else
-          return left < right;
+      case OpCode::eq:
+        return { double(fcmp(first.value, second.value)) };
 
-      case '>' :
-        if (op[1] == '=')
-          return left >= right;
-        else
-          return left > right;
+      case OpCode::neq:
+        return { double(!fcmp(first.value, second.value)) };
+
+      case OpCode::band:
+        return { double(!fcmp(first.value, 0.0) && !fcmp(second.value, 0.0)) };
+
+      case OpCode::bor:
+        return { double(!fcmp(first.value, 0.0) || !fcmp(second.value, 0.0)) };
+
+      case OpCode::atan2:
+        return { atan2(first.value, second.value) };
+
+      case OpCode::pow:
+        return { pow(first.value, second.value) };
+
+      default:
+        throw eval_error("invalid operator");
     }
-
-    if (strinpcmp("abs", op))
-      return abs(right);
-
-    return 0;
   }
 
 
-  //|///////////////////////// Evaluator::evaluate //////////////////////////
-  ///
+  //|////////////////////// Evaluator::eval_expression //////////////////////
+  Evaluator::Operand Evaluator::eval_expression(Operator op, Operand third, Operand second, Operand first) const
+  {
+    switch(static_cast<OpCode>(op.code))
+    {
+      case OpCode::cond:
+        return { fcmp(first.value, 0.0) ? third.value : second.value };
+
+      default:
+        throw eval_error("invalid operator");
+    }
+  }
+
+
+  //|////////////////////// Evaluator::evaluate /////////////////////////////
   /// Evaluate a mathmatical expression (*, /, +, -)
   ///
   /// \param[in] expression The expression to Evaluate
   ///
   double Evaluator::evaluate(const char *expression) const
   {
-    // Two Stacks
-    SimpleStack<int> OperatorStack;
-    SimpleStack<double> OperandStack;
+    SimpleStack<Operator> operatorstack;
+    SimpleStack<Operand> operandstack;
 
-    int tkpos, pos = 0;
     TokenType tktype;
-    UnaryMask unaryop = UnaryMask::NextUnary;
+    size_t tkpos, tklen;
+    Operator tkop;
 
-    //
-    // For each token
-    //
-    while ((tktype = GetToken(pos, expression, &tkpos)) != TokenType::NoToken)
+    size_t pos = 0;
+    OpType nextop = OpType::PrefixOp;
+
+    while ((tktype = next_token(pos, expression, &tkpos, &tklen)) != TokenType::NoToken)
     {
       switch(tktype)
       {
-        case TokenType::OpToken :
+        case TokenType::OpToken:
 
-          // Attempt to directly apply unary operators inline...
-          if (unaryop == UnaryMask::NextUnary && IsUnaryOp(&expression[tkpos]))
-          {
-            OperandStack.push(0);
-            OperatorStack.push(strlen(expression));
-            OperatorStack.push(tkpos);
-            break;
-          }
+          make_operator(&tkop.code, &tkop.order, &tkop.precedence, &expression[tkpos], nextop);
 
           while (true)
           {
-            // Anything We Can Do ?
-            if (OperatorStack.size() == 0 || expression[tkpos] == '(')
+            if (expression[tkpos] == '(')
             {
-              OperatorStack.push(tkpos);
+              operatorstack.push(tkop);
               break;
             }
 
-            // Ensure Higher Precedence Ops Done First...
-            if (GetPrecedence(&expression[OperatorStack.peek()]) > GetPrecedence(&expression[tkpos]))
+            if (nextop == OpType::PrefixOp)
             {
-              OperatorStack.push(tkpos);
+              operatorstack.push(tkop);
               break;
             }
 
-            // End of Bracketed Expression ?
-            if (expression[OperatorStack.peek()] == '(')
+            if (operatorstack.size() == 0)
             {
-              OperatorStack.pop();
+              operatorstack.push(tkop);
               break;
             }
 
-            // End of Unary Expression ?
-            if (expression[OperatorStack.peek()] == 0)
+            if (operatorstack.peek().precedence > tkop.precedence)
             {
-              OperatorStack.pop();
-              continue;
-            }
-
-            // Lets Actually Evaluate Something...
-            if (OperandStack.size() >= 2)
-            {
-              int op = OperatorStack.pop();
-              double right = OperandStack.pop();
-              double left = OperandStack.pop();
-
-              OperandStack.push(eval_expression(left, &expression[op], right));
-            }
-            else
+              operatorstack.push(tkop);
               break;
+            }
+
+            if (operatorstack.peek().code == static_cast<int>(OpCode::open))
+            {
+              operatorstack.pop();
+              break;
+            }
+
+            if (operatorstack.peek().code == static_cast<int>(OpCode::comma))
+            {
+              operatorstack.pop();
+              break;
+            }
+
+            Operator op = operatorstack.pop();
+
+            if (operandstack.size() < (size_t)op.order)
+              throw eval_error("invalid unwind");
+
+            switch(op.order)
+            {
+              case 1:
+                operandstack.push(eval_expression(op, operandstack.pop()));
+                break;
+
+              case 2:
+                //operandstack.push(eval_expression(op, operandstack.pop(), operandstack.pop())); // c++17
+                {  auto a = operandstack.pop(); auto b = operandstack.pop(); operandstack.push(eval_expression(op, a, b)); }
+                break;
+
+              case 3:
+                //operandstack.push(eval_expression(op, operandstack.pop(), operandstack.pop(), operandstack.pop())); // c++17
+                {  auto a = operandstack.pop(); auto b = operandstack.pop(); auto c = operandstack.pop(); operandstack.push(eval_expression(op, a, b, c)); }
+                break;
+            }
           }
 
           if (expression[tkpos] != '(' && expression[tkpos] != ')')
-            unaryop = UnaryMask::NextUnary;
+            nextop = OpType::PrefixOp;
 
           break;
 
-        case TokenType::ArgToken :
+        case TokenType::ArgToken:
 
-          OperandStack.push(eval_argument(&expression[tkpos]));
+          operandstack.push({ eval_argument(&expression[tkpos], tklen) });
 
-          unaryop = UnaryMask::NoUnary;
+          nextop = OpType::InfixOp;
 
           break;
 
-        case TokenType::NoToken :
+        case TokenType::NoToken:
 
           break;
       }
     }
 
-    //
-    // Finally, tidy up the stacks
-    //
-    while (OperatorStack.size() > 0)
+    while (operatorstack.size() > 0)
     {
-      int op = OperatorStack.pop();
+      Operator op = operatorstack.pop();
 
-      if (expression[op] == '(' || expression[op] == 0)
-        op = OperatorStack.pop();
+      if (operandstack.size() < (size_t)op.order)
+        throw eval_error("invalid unwind");
 
-      if (OperandStack.size() >= 2)
+      switch(op.order)
       {
-        double right = OperandStack.pop();
-        double left = OperandStack.pop();
+        case 1:
+          operandstack.push(eval_expression(op, operandstack.pop()));
+          break;
 
-        OperandStack.push(eval_expression(left, &expression[op], right));
+        case 2:
+//          operandstack.push(eval_expression(op, operandstack.pop(), operandstack.pop())); // c++17
+          {  auto a = operandstack.pop(); auto b = operandstack.pop(); operandstack.push(eval_expression(op, a, b)); }
+          break;
+
+        case 3:
+//          operandstack.push(eval_expression(op, operandstack.pop(), operandstack.pop(), operandstack.pop())); // c++17
+          {  auto a = operandstack.pop(); auto b = operandstack.pop(); auto c = operandstack.pop(); operandstack.push(eval_expression(op, a, b, c)); }
+          break;
       }
     }
 
-    // Return the Result
-    return (OperandStack.size() > 0) ? OperandStack.pop() : 0;
+    if (operatorstack.size() != 0 || operandstack.size() != 1)
+      throw eval_error("invalid unwind");
+
+    return operandstack.pop().value;
   }
 
 } } // namespace lml

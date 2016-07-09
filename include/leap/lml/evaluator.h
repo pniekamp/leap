@@ -12,6 +12,7 @@
 #define LMLEVALUATOR_HH
 
 #include <vector>
+#include <functional>
 
 /**
  * \namespace leap::lml
@@ -22,17 +23,6 @@
 namespace leap { namespace lml
 {
 
-  /////////// EvaluatorHook ///////////
-  class EvaluatorHook
-  {
-    EvaluatorHook() { }
-    virtual ~EvaluatorHook() { }
-
-    public:
-      virtual double eval_variable(const char *variable) = 0;
-  };
-
-
   //|-------------------- Evaluator -----------------------------------------
   //|------------------------------------------------------------------------
   /**
@@ -41,26 +31,22 @@ namespace leap { namespace lml
    * A class to evaluate mathmatical expressions
    *
    * Supports unary +, unary -, +, -, *, /, order of precedence, ( )
-   * and variables (\@V)
+   * and variables
    *
    * Variable support in the evaluator class takes two basic forms. An internal
    * list of all defined variables is maintained. Variables can be added to
-   * this list via the AddVariable function. When a variable (\@n) is encountered
+   * this list via the add_variable function. When a variable is encountered
    * within an expression, the list is accessed to determine a value for n. If
    * no value is defined, the Evaluator Hook is called (if specified).
-   *
-   * The Evaluator Hook is defined by passing a pointer to a class that derives
-   * from EvaluatorHook to the DefineEvalHook function. This class may override
-   * the EvalVariable method to return the value of variables.
    *
    * Typical Use :
    * \code
    *   {
    *     Evaluator evaluator;
    *
-   *     evaluator.AddVariable("input", inputvalue);
+   *     evaluator.add_variable("input", inputvalue);
    *
-   *     double result = evaluator.Evaluate("15 + @input * (8/9)");
+   *     double result = evaluator.evaluate("15 + input * (8/9)");
    *   }
    * \endcode
   **/
@@ -68,31 +54,57 @@ namespace leap { namespace lml
   class Evaluator
   {
     public:
+
+      class eval_error : public std::logic_error
+      {
+        public:
+          eval_error(std::string const &arg)
+            : logic_error(arg)
+          {
+          }
+      };
+
+    public:
       Evaluator();
 
       void add_variable(const char *name, double value);
       void remove_all_variables();
 
-      void define_evalhook(EvaluatorHook *hook);
+      void define_evalhook(double(*hook)(Evaluator const &, const char *, size_t));
 
       double evaluate(const char *expression) const;
 
     private:
 
-      double eval_argument(const char *arg) const;
-      double eval_expression(double left, const char *op, double right) const;
-
-    private:
-
-      struct VariableData
+      struct Operator
       {
-        char name[32];
+        int code;
+        int order;
+        int precedence;
+      };
+
+      struct Operand
+      {
         double value;
       };
 
-      std::vector<VariableData> m_variables;
+      Operand eval_argument(const char *arg, size_t len) const;
+      Operand eval_expression(Operator op, Operand first) const;
+      Operand eval_expression(Operator op, Operand second, Operand first) const;
+      Operand eval_expression(Operator op, Operand third, Operand second, Operand first) const;
 
-      EvaluatorHook *m_hook;
+    private:
+
+      struct Variable
+      {
+        size_t len;
+        char name[32];
+        Operand value;
+      };
+
+      std::vector<Variable> m_variables;
+
+      std::function<double(Evaluator const &, const char *, size_t)> m_hook;
   };
 
 } } //namespace
