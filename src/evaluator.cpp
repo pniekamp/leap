@@ -42,10 +42,10 @@ enum class OpType
 
 enum class OpCode
 {
-  comma, mod, div, mul, abs, sin, cos, tan, asin, acos, atan, atan2, pow, sqrt, log, exp, log2, exp2, cond, plus, minus, leq, geq, le, ge, eq, neq, bnot, band, bor, open, close
+  mod, div, mul, abs, min, max, sin, cos, tan, asin, acos, atan, atan2, pow, sqrt, log, exp, log2, exp2, cond, plus, minus, leq, geq, le, ge, eq, neq, bnot, band, bor, open, close, comma,
 };
 
-const char *Operators[] = { ",", "% / * abs sin cos tan asin acos atan atan2 pow sqrt log exp log2 exp2 if", "+ -", "<= >= < >", "== !=", "! && ||", "( )", "" };
+const char *Operators[] = { "% / * abs min max sin cos tan asin acos atan atan2 pow sqrt log exp log2 exp2 if", "+ -", "<= >= < >", "== !=", "! && ||", "( )", ",", "" };
 
 namespace
 {
@@ -91,8 +91,10 @@ namespace
 
 
   //|///////////////////////// is_operator //////////////////////////////////
-  int is_operator(const char *c)
+  int is_operator(const char *c, int *code, int *order, int *precedence, OpType optype)
   {
+    *code = 0;
+
     for(int i = 0; Operators[i][0] != 0; ++i)
     {
       for(int j = 0; Operators[i][j] != 0; ++j)
@@ -102,11 +104,61 @@ namespace
           ;
 
         if (Operators[i][j+k] <= ' ')
+        {
+          *order = 0;
+          *precedence = i;
+
+          if (optype == OpType::InfixOp)
+          {
+            *order = 2;
+          }
+
+          if (optype == OpType::PrefixOp)
+          {
+            switch(static_cast<OpCode>(*code))
+            {
+              case OpCode::plus:
+              case OpCode::minus:
+              case OpCode::abs:
+              case OpCode::sin:
+              case OpCode::cos:
+              case OpCode::tan:
+              case OpCode::asin:
+              case OpCode::acos:
+              case OpCode::atan:
+              case OpCode::sqrt:
+              case OpCode::log:
+              case OpCode::exp:
+              case OpCode::log2:
+              case OpCode::exp2:
+              case OpCode::bnot:
+                *order = 1;
+                break;
+
+              case OpCode::min:
+              case OpCode::max:
+              case OpCode::atan2:
+              case OpCode::pow:
+                *order = 2;
+                break;
+
+              case OpCode::cond:
+                *order = 3;
+                break;
+
+              default:
+                break;
+            }
+          }
+
           return k;
+        }
 
         // Skip to next op
         for( ; Operators[i][j+1] != 0 && Operators[i][j] != ' '; ++j)
           ;
+
+        *code += 1;
       }
     }
 
@@ -157,8 +209,16 @@ namespace
         ++k;
         ++c;
 
-        while (*c != 0 && *(c-1) != ']')
+        int nest = 1;
+
+        while (*c != 0 && nest > 0)
         {
+          if (*c == '[')
+            ++nest;
+
+          if (*c == ']')
+            --nest;
+
           ++k;
           ++c;
         }
@@ -170,12 +230,12 @@ namespace
 
 
   //|///////////////////////// next_token ///////////////////////////////////
-  TokenType next_token(size_t &pos, const char *exp, size_t *tokenpos, size_t *tokenlen)
+  TokenType next_token(size_t &pos, const char *exp, size_t *tokenpos, size_t *tokenlen, int *code, int *order, int *precedence, OpType optype)
   {
     for( ; exp[pos] != 0 && exp[pos] <= ' '; ++pos)
       ;
 
-    size_t opcnt = is_operator(&exp[pos]);
+    size_t opcnt = is_operator(&exp[pos], code, order, precedence, optype);
     size_t agcnt = is_argument(&exp[pos]);
 
     *tokenpos = pos;
@@ -192,79 +252,6 @@ namespace
 
     return TokenType::NoToken;
   }
-
-
-  //|///////////////////////// make_operator ////////////////////////////////
-  void make_operator(int *code, int *order, int *precedence, const char *c, OpType type)
-  {
-    *code = 0;
-
-    for(int i = 0; Operators[i][0] != 0; ++i)
-    {
-      for(int j = 0; Operators[i][j] != 0; ++j)
-      {
-        int k;
-        for(k = 0; Operators[i][j+k] == c[k] && Operators[i][j+k] > ' '; k++)
-          ;
-
-        if (Operators[i][j+k] <= ' ')
-        {
-          *order = 0;
-          *precedence = i;
-
-          if (type == OpType::InfixOp)
-          {
-            *order = 2;
-          }
-
-          if (type == OpType::PrefixOp)
-          {
-            switch(static_cast<OpCode>(*code))
-            {
-              case OpCode::plus:
-              case OpCode::minus:
-              case OpCode::abs:
-              case OpCode::sin:
-              case OpCode::cos:
-              case OpCode::tan:
-              case OpCode::asin:
-              case OpCode::acos:
-              case OpCode::atan:
-              case OpCode::sqrt:
-              case OpCode::log:
-              case OpCode::exp:
-              case OpCode::log2:
-              case OpCode::exp2:
-              case OpCode::bnot:
-                *order = 1;
-                break;
-
-              case OpCode::atan2:
-              case OpCode::pow:
-                *order = 2;
-                break;
-
-              case OpCode::cond:
-                *order = 3;
-                break;
-
-              default:
-                break;
-            }
-          }
-
-          return;
-        }
-
-        // Skip to next op
-        for( ; Operators[i][j+1] != 0 && Operators[i][j] != ' '; ++j)
-          ;
-
-        *code += 1;
-      }
-    }
-  }
-
 }
 
 namespace leap { namespace lml
@@ -455,6 +442,12 @@ namespace leap { namespace lml
       case OpCode::bor:
         return { double(!fcmp(first.value, 0.0) || !fcmp(second.value, 0.0)) };
 
+      case OpCode::min:
+        return { min(first.value, second.value) };
+
+      case OpCode::max:
+        return { max(first.value, second.value) };
+
       case OpCode::atan2:
         return { atan2(first.value, second.value) };
 
@@ -498,22 +491,14 @@ namespace leap { namespace lml
     size_t pos = 0;
     OpType nextop = OpType::PrefixOp;
 
-    while ((tktype = next_token(pos, expression, &tkpos, &tklen)) != TokenType::NoToken)
+    while ((tktype = next_token(pos, expression, &tkpos, &tklen, &tkop.code, &tkop.order, &tkop.precedence, nextop)) != TokenType::NoToken)
     {
       switch(tktype)
       {
         case TokenType::OpToken:
 
-          make_operator(&tkop.code, &tkop.order, &tkop.precedence, &expression[tkpos], nextop);
-
           while (true)
           {
-            if (expression[tkpos] == '(')
-            {
-              operatorstack.push(tkop);
-              break;
-            }
-
             if (nextop == OpType::PrefixOp)
             {
               operatorstack.push(tkop);
@@ -534,13 +519,8 @@ namespace leap { namespace lml
 
             if (operatorstack.peek().code == static_cast<int>(OpCode::open))
             {
-              operatorstack.pop();
-              break;
-            }
-
-            if (operatorstack.peek().code == static_cast<int>(OpCode::comma))
-            {
-              operatorstack.pop();
+              if (tkop.code != static_cast<int>(OpCode::comma))
+                operatorstack.pop();
               break;
             }
 

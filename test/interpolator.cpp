@@ -239,7 +239,7 @@ static void BezierTest()
 
   Bezier<Vector3d> bezier3({ Vector3(0.0, 0.0, 0.0), Vector3(1.0, 1.0, 1.0), Vector3(5.0, 15.0, 20.0) });
 
-  if (!fcmp(bezier3.value(0.4)(0), 0.44) || !fcmp(bezier3.value(0.4)(1), -0.52) || !fcmp(bezier3.value(0.4)(2), -1.0))
+  if (!fcmp(bezier3.value(0.4)(0), 0.44) || !fcmp(bezier3.value(0.4)(1), -0.52) || !fcmp(bezier3.value(0.4)(2), -1.0, 1e-3))
     cout << "** Bezier3 Value Error\n";
 }
 

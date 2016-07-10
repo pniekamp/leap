@@ -99,6 +99,7 @@ void EvaluatorTest()
 
   check(evaluator, "abs(9)", 9);
   check(evaluator, "abs(-9)", 9);
+  check(evaluator, "-abs(-9)", -9);
 
   check(evaluator, "sin(0.1)", sin(0.1));
   check(evaluator, "cos(0.1)", cos(0.1));
@@ -109,6 +110,9 @@ void EvaluatorTest()
 
   check(evaluator, "pow(x, 2)", pow(x, 2));
   check(evaluator, "sqrt(4)", sqrt(4));
+
+  check(evaluator, "min(0.1 + x * 3, 0.2 * x)", 0.2 * x);
+  check(evaluator, "max(0.1 + x * 3, 0.2 * x)", 0.1 + x * 3);
 
   check(evaluator, "if(true, 1, 0)", 1);
   check(evaluator, "if(false, 1, 0)", 0);
