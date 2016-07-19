@@ -252,7 +252,7 @@ namespace leap { namespace lml
   template<typename Bound, typename T, size_t Stride, size_t... Indices>
   std::ostream &operator <<(std::ostream &os, BoundView<Bound, T, Stride, Indices...> const &b)
   {
-    T elements[2][b.size()] = { { b[0][Indices]... }, { b[1][Indices]... } };
+    T elements[2][sizeof...(Indices)] = { { b[0][Indices]... }, { b[1][Indices]... } };
 
     os << '[';
 

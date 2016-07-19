@@ -303,8 +303,8 @@ namespace leap { namespace lml
 
     slabintersect<Point> result;
 
-    auto t1 = std::array<T, bound.size()>{ ((low<Indices>(bound) - get<Indices>(a)) / (get<Indices>(b) - get<Indices>(a)))... };
-    auto t2 = std::array<T, bound.size()>{ ((high<Indices>(bound) - get<Indices>(a)) / (get<Indices>(b) - get<Indices>(a)))... };
+    auto t1 = std::array<T, sizeof...(Indices)>{ ((low<Indices>(bound) - get<Indices>(a)) / (get<Indices>(b) - get<Indices>(a)))... };
+    auto t2 = std::array<T, sizeof...(Indices)>{ ((high<Indices>(bound) - get<Indices>(a)) / (get<Indices>(b) - get<Indices>(a)))... };
 
     result.tmin = std::min(t1[0], t2[0]);
     result.tmax = std::max(t1[0], t2[0]);
@@ -326,7 +326,7 @@ namespace leap { namespace lml
   template<typename Bound, typename T, size_t IStride, size_t... Indices, typename Point>
   auto intersection(BoundView<Bound, T, IStride, Indices...> const &bound, Point const &a, Point const &b)
   {
-    return intersection(bound, a, b, make_index_sequence<0, bound.size()>());
+    return intersection(bound, a, b, make_index_sequence<0, sizeof...(Indices)>());
   }
 
 

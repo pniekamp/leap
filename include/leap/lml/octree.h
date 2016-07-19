@@ -357,7 +357,7 @@ namespace leap { namespace lml
 
         if (items.size() >= 16)
         {
-          constexpr int n = std::pow(2, dimension);
+          constexpr int n = (1 << dimension);
 
           nodes.resize(n, Node(this, nodes.get_allocator()));
 

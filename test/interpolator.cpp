@@ -234,12 +234,12 @@ static void BezierTest()
 {
   Bezier<Vector2f> bezier({ Vector2(0.0f, 0.0f), Vector2(1.0f, 1.0f), Vector2(5.0f, 15.0f) });
 
-  if (!fcmp(bezier.value(0.4)(0), 0.44f) || !fcmp(bezier.value(0.4)(1), -0.52f))
+  if (!fcmp(bezier.value(0.4)(0), 0.44f, 1e-3f) || !fcmp(bezier.value(0.4)(1), -0.52f, 1e-3f))
     cout << "** Bezier Value Error\n";
 
   Bezier<Vector3d> bezier3({ Vector3(0.0, 0.0, 0.0), Vector3(1.0, 1.0, 1.0), Vector3(5.0, 15.0, 20.0) });
 
-  if (!fcmp(bezier3.value(0.4)(0), 0.44) || !fcmp(bezier3.value(0.4)(1), -0.52) || !fcmp(bezier3.value(0.4)(2), -1.0, 1e-3))
+  if (!fcmp(bezier3.value(0.4)(0), 0.44, 1e-3) || !fcmp(bezier3.value(0.4)(1), -0.52, 1e-3) || !fcmp(bezier3.value(0.4)(2), -1.0, 1e-3))
     cout << "** Bezier3 Value Error\n";
 }
 
