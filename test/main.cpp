@@ -71,7 +71,7 @@ int main(int argc, char *args[])
 
     RTreeTest();
   }
-  catch(const exception &e)
+  catch(exception &e)
   {
     cout << "** " << e.what() << endl;
   }

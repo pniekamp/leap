@@ -70,8 +70,6 @@ namespace leap
       typedef basic_sapentry<T, traits> entry_type;
       typedef std::basic_string<T, traits> string_type;
       typedef std::basic_streambuf<T, traits> streambuf_type;
-      typedef typename string_type::size_type size_type;
-      typedef std::ios_base ios_base;
 
       enum ParseFlags
       {
@@ -88,15 +86,15 @@ namespace leap
 
       void define(string_type const &name, string_type const &value);
 
-      operator bool() const { return (m_state == ios_base::goodbit); }
+      operator bool() const { return (m_state == std::ios_base::goodbit); }
 
-      void set_state(ios_base::iostate state) { m_state = state; }
+      void set_state(std::ios_base::iostate state) { m_state = state; }
 
       basic_sapstream &operator >>(entry_type &entry);
 
     public:
 
-      streambuf_type *rdbuf() const { m_sb->pubseekpos(m_sbpos, ios_base::in); return m_sb; }
+      streambuf_type *rdbuf() const { m_sb->pubseekpos(m_sbpos, std::ios_base::in); return m_sb; }
       streambuf_type *rdbuf(streambuf_type *sb);
 
       void rewind();
@@ -151,7 +149,7 @@ namespace leap
     m_flags = FullParse;
 
     m_sb = NULL;
-    m_state = ios_base::eofbit;
+    m_state = std::ios_base::eofbit;
   }
 
 
@@ -180,9 +178,9 @@ namespace leap
     m_sb = sb;
 
     if (m_sb != NULL)
-      m_sbpos = m_sb->pubseekoff(0, ios_base::cur, ios_base::in);
+      m_sbpos = m_sb->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
 
-    m_state = (m_sb != NULL) ? ios_base::goodbit : ios_base::eofbit;
+    m_state = (m_sb != NULL) ? std::ios_base::goodbit : std::ios_base::eofbit;
 
     return old;
   }
@@ -194,7 +192,7 @@ namespace leap
   {
     m_sbpos = 0;
 
-    m_state = (m_sb != NULL) ? ios_base::goodbit : ios_base::eofbit;  
+    m_state = (m_sb != NULL) ? std::ios_base::goodbit : std::ios_base::eofbit;
   }
 
 
@@ -202,7 +200,7 @@ namespace leap
   template<typename T, class traits>
   bool basic_sapstream<T, traits>::getline(T *buffer, unsigned int n)
   {
-    m_sb->pubseekpos(m_sbpos, ios_base::in);
+    m_sb->pubseekpos(m_sbpos, std::ios_base::in);
 
     if (m_sb->sgetc() == traits::eof())
       return false;
@@ -217,7 +215,7 @@ namespace leap
     while (is_eol(m_sb->sgetc()))
       m_sb->sbumpc();
 
-    m_sbpos = m_sb->pubseekoff(0, ios_base::cur, ios_base::in);
+    m_sbpos = m_sb->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
 
     return true;
   }
@@ -497,7 +495,7 @@ namespace leap
 
         // unnesting before we even begun ?
         if (level < 0)
-          m_state = ios_base::failbit;
+          m_state = std::ios_base::failbit;
 
         if (level <= 0)
           return *this;
@@ -511,7 +509,7 @@ namespace leap
 
     // End of file without a valid entry
 
-    m_state = ios_base::eofbit;
+    m_state = std::ios_base::eofbit;
 
     return *this;
   }
@@ -534,7 +532,6 @@ namespace leap
   {
     public:
 
-      typedef size_t size_type;
       typedef std::basic_string<T, traits> string_type;
 
       struct Attribute
@@ -561,9 +558,9 @@ namespace leap
 
     public:
 
-      size_type size() const { return m_attributes.size(); }
+      size_t size() const { return m_attributes.size(); }
 
-      Attribute const &operator [](size_type i) const { return m_attributes[i]; }
+      Attribute const &operator [](size_t i) const { return m_attributes[i]; }
 
       const_iterator begin() const { return m_attributes.begin(); }
       const_iterator end() const { return m_attributes.end(); }

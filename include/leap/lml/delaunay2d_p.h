@@ -16,20 +16,38 @@
 
 namespace leap { namespace lml { namespace Delaunay2d
 {
+  // Traits
+
+  //|///////////////////// pos ////////////////////////////////////////////
+  template<typename Site>
+  struct pos
+  {
+    decltype(auto) operator()(Site const &site) const
+    {
+      return site;
+    }
+  };
+
 
   //////////////////////// less_xy //////////////////////////////////////////
-  template<typename T>
-  bool less_xy(T const &lhs, T const &rhs)
+  template<typename Site, class pos>
+  bool less_xy(Site const &lhs, Site const &rhs)
   {
-    return (get<0>(lhs) == get<0>(rhs)) ? (get<1>(lhs) < get<1>(rhs)) : (get<0>(lhs) < get<0>(rhs));
+    auto const &a = pos()(lhs);
+    auto const &b = pos()(rhs);
+
+    return (get<0>(a) == get<0>(b)) ? (get<1>(a) < get<1>(b)) : (get<0>(a) < get<0>(b));
   }
 
 
   //////////////////////// equal_xy /////////////////////////////////////////
-  template<typename T>
-  bool equal_xy(T const &lhs, T const &rhs)
+  template<typename Site, class pos>
+  bool equal_xy(Site const &lhs, Site const &rhs)
   {
-    return (get<0>(lhs) == get<0>(rhs)) && (get<1>(lhs) == get<1>(rhs));
+    auto const &a = pos()(lhs);
+    auto const &b = pos()(rhs);
+
+    return (get<0>(a) == get<0>(b)) && (get<1>(a) == get<1>(b));
   }
 
 
@@ -88,44 +106,9 @@ namespace leap { namespace lml { namespace Delaunay2d
   }
 
 
-  //|///////////////////// rightof //////////////////////////////////////////
-  template<typename T>
-  bool rightof(T *site, Edge<T> *edge)
-  {
-    return orientation(*site, *(edge->dst()), *(edge->org())) > 0.0;
-  }
-
-
-  //|///////////////////// leftof ///////////////////////////////////////////
-  template<typename T>
-  bool leftof(T *site, Edge<T> *edge)
-  {
-    return orientation(*site, *(edge->org()), *(edge->dst())) > 0.0;
-  }
-
-
-  //|///////////////////// incircle /////////////////////////////////////////
-  template<typename Point>
-  bool incircle(Point *a, Point *b, Point *c, Point *d)
-  {
-    if ((a == b) || (a == c) || (a == d) || (b == c) || (b == d) || (c == d))
-      return false;
-
-    double x1 = get<0>(*a), y1 = get<1>(*a);
-    double x2 = get<0>(*b), y2 = get<1>(*b);
-    double x3 = get<0>(*c), y3 = get<1>(*c);
-    double x4 = get<0>(*d), y4 = get<1>(*d);
-    
-    double da = ((y4-y1)*(x2-x3)+(x4-x1)*(y2-y3))*((x4-x3)*(x2-x1)-(y4-y3)*(y2-y1));
-    double db = ((y4-y3)*(x2-x1)+(x4-x3)*(y2-y1))*((x4-x1)*(x2-x3)-(y4-y1)*(y2-y3));
-
-    return da > db;
-  }
-
-
   //|--------------------- Mesh -------------------------------------------
   //|----------------------------------------------------------------------
-  template<typename T>
+  template<typename T, class pos = pos<T>>
   class Mesh
   {
     public:
@@ -164,7 +147,11 @@ namespace leap { namespace lml { namespace Delaunay2d
 
       void destroy_edge(Edge<T> *edge);
 
-      void delaunay(int low, int high, Edge<T> **left, Edge<T> **right);
+      bool leftof(T *site, Edge<T> *edge);
+      bool rightof(T *site, Edge<T> *edge);
+      bool incircle(T *a, T *b, T *c, T *d);
+
+      void delaunay(size_t low, size_t high, Edge<T> **left, Edge<T> **right);
 
     private:
 
@@ -175,15 +162,15 @@ namespace leap { namespace lml { namespace Delaunay2d
 
 
   //|///////////////////// Mesh::Constructor/////////////////////////////////
-  template<typename T>
-  Mesh<T>::Mesh()
+  template<typename T, class pos>
+  Mesh<T, pos>::Mesh()
   {
   }
 
 
   //|///////////////////// Mesh::Destructor//////////////////////////////////
-  template<typename T>
-  Mesh<T>::~Mesh()
+  template<typename T, class pos>
+  Mesh<T, pos>::~Mesh()
   {
     for(auto i = m_edges.begin(); i != m_edges.end(); ++i)
       delete[] *i;
@@ -192,8 +179,8 @@ namespace leap { namespace lml { namespace Delaunay2d
 
   //|///////////////////// Mesh::add_site ///////////////////////////////////
   /// add a site to a Mesh Object
-  template<typename T>
-  void Mesh<T>::add_site(T const &site)
+  template<typename T, class pos>
+  void Mesh<T, pos>::add_site(T const &site)
   {
     m_sites.push_back(site);
   }
@@ -201,9 +188,9 @@ namespace leap { namespace lml { namespace Delaunay2d
 
   //|///////////////////// Mesh::add_points /////////////////////////////////
   /// add sites to a Mesh Object
-  template<typename T>
+  template<typename T, class pos>
   template<typename InputIterator>
-  void Mesh<T>::add_sites(InputIterator f, InputIterator l)
+  void Mesh<T, pos>::add_sites(InputIterator f, InputIterator l)
   {
     std::copy(f, l, std::back_inserter(m_sites));
   }
@@ -211,8 +198,8 @@ namespace leap { namespace lml { namespace Delaunay2d
 
   //|///////////////////// Mesh::make_edge //////////////////////////////////
   /// make a quad-edge object
-  template<typename T>
-  Edge<T> *Mesh<T>::make_edge(T *org, T *dst)
+  template<typename T, class pos>
+  Edge<T> *Mesh<T, pos>::make_edge(T *org, T *dst)
   {
     Edge<T> *quad = new Edge<T>[4];
 
@@ -237,8 +224,8 @@ namespace leap { namespace lml { namespace Delaunay2d
 
   //|///////////////////// Mesh::destroy_edge ///////////////////////////////
   /// destroy a quad-edge object
-  template<typename T>
-  void Mesh<T>::destroy_edge(Edge<T> *edge)
+  template<typename T, class pos>
+  void Mesh<T, pos>::destroy_edge(Edge<T> *edge)
   {
     splice_edges(edge, edge->o_prev());
     splice_edges(sym(edge), sym(edge)->o_prev());
@@ -251,8 +238,8 @@ namespace leap { namespace lml { namespace Delaunay2d
 
   //|///////////////////// Mesh::splice_edges ///////////////////////////////
   /// splice two quad-edge objects
-  template<typename T>
-  void Mesh<T>::splice_edges(Edge<T> *a, Edge<T> *b)
+  template<typename T, class pos>
+  void Mesh<T, pos>::splice_edges(Edge<T> *a, Edge<T> *b)
   {
     Edge<T> *p = rot(a->next);
     Edge<T> *q = rot(b->next);
@@ -263,8 +250,8 @@ namespace leap { namespace lml { namespace Delaunay2d
 
 
   //|///////////////////// Mesh::make_edge //////////////////////////////////
-  template<typename T>
-  Edge<T> *Mesh<T>::make_edge(Edge<T> *a, Edge<T> *b)
+  template<typename T, class pos>
+  Edge<T> *Mesh<T, pos>::make_edge(Edge<T> *a, Edge<T> *b)
   {
     Edge<T> *quad = make_edge(a->dst(), b->org());
 
@@ -275,10 +262,50 @@ namespace leap { namespace lml { namespace Delaunay2d
   }
 
 
+  //|///////////////////// leftof ///////////////////////////////////////////
+  template<typename T, class pos>
+  bool Mesh<T, pos>::leftof(T *site, Edge<T> *edge)
+  {
+    return orientation(pos()(*site), pos()(*(edge->org())), pos()(*(edge->dst()))) > 0.0;
+  }
+
+
+  //|///////////////////// rightof //////////////////////////////////////////
+  template<typename T, class pos>
+  bool Mesh<T, pos>::rightof(T *site, Edge<T> *edge)
+  {
+    return orientation(pos()(*site), pos()(*(edge->dst())), pos()(*(edge->org()))) > 0.0;
+  }
+
+
+  //|///////////////////// incircle /////////////////////////////////////////
+  template<typename T, class pos>
+  bool Mesh<T, pos>::incircle(T *a, T *b, T *c, T *d)
+  {
+    if ((a == b) || (a == c) || (a == d) || (b == c) || (b == d) || (c == d))
+      return false;
+
+    auto const &ap = pos()(*a);
+    auto const &bp = pos()(*b);
+    auto const &cp = pos()(*c);
+    auto const &dp = pos()(*d);
+
+    auto x1 = get<0>(ap), y1 = get<1>(ap);
+    auto x2 = get<0>(bp), y2 = get<1>(bp);
+    auto x3 = get<0>(cp), y3 = get<1>(cp);
+    auto x4 = get<0>(dp), y4 = get<1>(dp);
+
+    auto da = ((y4-y1)*(x2-x3)+(x4-x1)*(y2-y3))*((x4-x3)*(x2-x1)-(y4-y3)*(y2-y1));
+    auto db = ((y4-y3)*(x2-x1)+(x4-x3)*(y2-y1))*((x4-x1)*(x2-x3)-(y4-y1)*(y2-y3));
+
+    return da > db;
+  }
+
+
   //|///////////////////// delaunay /////////////////////////////////////////
   /// delaunay divide and conquer
-  template<typename T>
-  void Mesh<T>::delaunay(int low, int high, Edge<T> **left, Edge<T> **right)
+  template<typename T, class pos>
+  void Mesh<T, pos>::delaunay(size_t low, size_t high, Edge<T> **left, Edge<T> **right)
   {
     if (high - low == 2)
     {
@@ -293,7 +320,7 @@ namespace leap { namespace lml { namespace Delaunay2d
 
       splice_edges(sym(p), q);
 
-      auto direction = orientation(m_sites[low], m_sites[low+1], m_sites[low+2]);
+      auto direction = orientation(pos()(m_sites[low]), pos()(m_sites[low+1]), pos()(m_sites[low+2]));
 
       if (direction != 0.0)
       {
@@ -319,7 +346,7 @@ namespace leap { namespace lml { namespace Delaunay2d
 
     else
     {
-      int mid = (low + high)/2;
+      size_t mid = (low + high)/2;
 
       Edge<T> *ldo, *ldi, *rdi, *rdo;
 
@@ -387,15 +414,15 @@ namespace leap { namespace lml { namespace Delaunay2d
 
   //|///////////////////// Mesh::triangulate ////////////////////////////////
   /// delaunay triangulation
-  template<typename T>
-  void Mesh<T>::triangulate()
+  template<typename T, class pos>
+  void Mesh<T, pos>::triangulate()
   {
     if (m_sites.size() < 3)
       return; // FlatInput
 
-    std::sort(m_sites.begin(), m_sites.end(), &less_xy<T>);
+    std::sort(m_sites.begin(), m_sites.end(), &less_xy<T, pos>);
 
-    m_sites.erase(unique(m_sites.begin(), m_sites.end(), &equal_xy<T>), m_sites.end());
+    m_sites.erase(unique(m_sites.begin(), m_sites.end(), &equal_xy<T, pos>), m_sites.end());
 
     Edge<T> *left, *right;
 

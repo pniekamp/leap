@@ -81,10 +81,7 @@ namespace leap { namespace lml
 
       typedef T value_type;
       typedef Backend<T, M, N> base_type;
-      typedef typename base_type::size_type size_type;
       typedef typename base_type::data_type data_type;
-      typedef T& reference;
-      typedef const T& const_reference;
 
     public:
       Matrix() = default;
@@ -100,15 +97,15 @@ namespace leap { namespace lml
       Matrix &operator =(Matrix<Q, M, N, C> const &other);
 
       // Storage Access
-      static constexpr size_type rows() { return M; }
-      static constexpr size_type columns() { return N; }
+      static constexpr size_t rows() { return M; }
+      static constexpr size_t columns() { return N; }
 
       constexpr data_type const &data() const { return base_type::data(); }
       data_type &data() { return base_type::data(); }
 
       // Element Access
-      constexpr const_reference operator()(size_type i, size_type j) const { return base_type::operator()(i, j); }
-      reference operator()(size_type i, size_type j) { return base_type::operator()(i, j); }
+      constexpr T const &operator()(size_t i, size_t j) const { return base_type::operator()(i, j); }
+      T &operator()(size_t i, size_t j) { return base_type::operator()(i, j); }
   };
 
 
@@ -118,8 +115,8 @@ namespace leap { namespace lml
   {
     auto v = m.begin();
 
-    for(size_type i = 0; i < M; ++i)
-      for(size_type j = 0; j < N; ++j)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         (*this)(i, j) = *v++;
   }
 
@@ -128,11 +125,11 @@ namespace leap { namespace lml
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   constexpr Matrix<T, M, N, B>::Matrix(std::initializer_list<std::initializer_list<T>> m)
   {
-    for(size_type i = 0; i < M; ++i)
+    for(size_t i = 0; i < M; ++i)
     {
       auto v = std::next(m.begin(), i)->begin();
 
-      for(size_type j = 0; j < N; ++j)
+      for(size_t j = 0; j < N; ++j)
         (*this)(i, j) = *v++;
     }
   }
@@ -142,8 +139,8 @@ namespace leap { namespace lml
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   constexpr Matrix<T, M, N, B>::Matrix(T k)
   {
-    for(size_type i = 0; i < M; ++i)
-      for(size_type j = 0; j < N; ++j)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         (*this)(i, j) = k;
   }
 
@@ -152,8 +149,8 @@ namespace leap { namespace lml
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   Matrix<T, M, N, B>::Matrix(std::vector<std::vector<T>> const &m)
   {
-    for(size_type i = 0; i < std::min(M, m.size()); ++i)
-      for(size_type j = 0; j < std::min(N, m[i].size()); ++j)
+    for(size_t i = 0; i < std::min(M, m.size()); ++i)
+      for(size_t j = 0; j < std::min(N, m[i].size()); ++j)
         (*this)(i, j) = m[i][j];
   }
 
@@ -163,8 +160,8 @@ namespace leap { namespace lml
   template<typename Q, template<typename, size_t, size_t> class C>
   Matrix<T, M, N, B>::Matrix(Matrix<Q, M, N, C> const &other)
   {
-    for(size_type i = 0; i < M; ++i)
-      for(size_type j = 0; j < N; ++j)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         (*this)(i, j) = other(i, j);
   }
 
@@ -174,8 +171,8 @@ namespace leap { namespace lml
   template<typename Q, template<typename, size_t, size_t> class C>
   Matrix<T, M, N, B> &Matrix<T, M, N, B>::operator =(Matrix<Q, M, N, C> const &other)
   {
-    for(size_type i = 0; i < M; ++i)
-      for(size_type j = 0; j < N; ++j)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         (*this)(i, j) = other(i, j);
 
     return *this;

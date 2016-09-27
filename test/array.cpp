@@ -33,7 +33,7 @@ static void ArrayBasicTest()
 
   for(size_t j = 0; j < A.shape()[0]; ++j)
     for(size_t i = 0; i < A.shape()[1]; ++i)
-      A[j][i] = j*100 + i;
+      A[j][i] = j*100.0 + i;
 
   if (A[4][1] != 401)
     cout << "** Error on Array Index\n";

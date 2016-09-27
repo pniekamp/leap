@@ -24,7 +24,7 @@ void SocketTest();
 
 struct Timer
 {
-  unsigned int elapsed() { return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - sa).count(); }
+  auto elapsed() { return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - sa).count(); }
 
   chrono::system_clock::time_point sa = chrono::system_clock::now();
 };

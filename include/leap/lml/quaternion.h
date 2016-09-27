@@ -44,17 +44,15 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef T scalar_type;
-      typedef Vector<T, 3> vector_type;
-      typedef T& reference;
-      typedef const T& const_reference;
+      typedef T scalar_t;
+      typedef Vector<T, 3> vector_t;
 
     public:
       Quaternion() = default;
       constexpr Quaternion(T w, T x, T y, T z);
-      explicit constexpr Quaternion(scalar_type w, vector_type const &vector);
-      explicit constexpr Quaternion(vector_type const &axis, scalar_type angle);
-      explicit constexpr Quaternion(vector_type const &xaxis, vector_type const &yaxis, vector_type const &zaxis);
+      explicit constexpr Quaternion(scalar_t w, vector_t const &vector);
+      explicit constexpr Quaternion(vector_t const &axis, scalar_t angle);
+      explicit constexpr Quaternion(vector_t const &xaxis, vector_t const &yaxis, vector_t const &zaxis);
 
       union
       {
@@ -68,20 +66,20 @@ namespace leap { namespace lml
 
         struct
         {
-          scalar_type scalar;
-          vector_type vector;
+          scalar_t scalar;
+          vector_t vector;
         };
       };
 
       // Euler
-      scalar_type ax() const { return std::atan2(2*(y*z + x*w), 1 - 2*(x*x + z*z)); }
-      scalar_type ay() const { return std::atan2(2*(x*z + y*w), 1 - 2*(x*x + y*y)); }
-      scalar_type az() const { return std::atan2(2*(x*y + z*w), 1 - 2*(y*y + z*z)); }
+      scalar_t ax() const { return std::atan2(2*(y*z + x*w), 1 - 2*(x*x + z*z)); }
+      scalar_t ay() const { return std::atan2(2*(x*z + y*w), 1 - 2*(x*x + y*y)); }
+      scalar_t az() const { return std::atan2(2*(x*y + z*w), 1 - 2*(y*y + z*z)); }
 
       // Basis
-      vector_type xaxis() const { return { 1 - 2*(y*y + z*z), 2*(x*y + z*w), 2*(x*z + y*w) }; }
-      vector_type yaxis() const { return { 2*(x*y - z*w), 1 - 2*(x*x + z*z), 2*(y*z + x*w) }; }
-      vector_type zaxis() const { return { 2*(x*z + y*w), 2*(y*z - x*w), 1 - 2*(x*x + y*y) }; }
+      vector_t xaxis() const { return { 1 - 2*(y*y + z*z), 2*(x*y + z*w), 2*(x*z + y*w) }; }
+      vector_t yaxis() const { return { 2*(x*y - z*w), 1 - 2*(x*x + z*z), 2*(y*z + x*w) }; }
+      vector_t zaxis() const { return { 2*(x*z + y*w), 2*(y*z - x*w), 1 - 2*(x*x + y*y) }; }
   };
 
 
@@ -95,7 +93,7 @@ namespace leap { namespace lml
 
   //|///////////////////// Quaternion::Constructor //////////////////////////
   template<typename T>
-  constexpr Quaternion<T>::Quaternion(scalar_type w, vector_type const &vector)
+  constexpr Quaternion<T>::Quaternion(scalar_t w, vector_t const &vector)
     : scalar(w),
       vector(vector)
   {
@@ -105,7 +103,7 @@ namespace leap { namespace lml
   //|///////////////////// Quaternion::Constructor //////////////////////////
   /// axis should be a unit vector
   template<typename T>
-  constexpr Quaternion<T>::Quaternion(vector_type const &axis, scalar_type angle)
+  constexpr Quaternion<T>::Quaternion(vector_t const &axis, scalar_t angle)
     : scalar(std::cos(T(0.5)*angle)),
       vector(axis * std::sin(T(0.5)*angle))
   {
@@ -115,7 +113,7 @@ namespace leap { namespace lml
   //|///////////////////// Quaternion::Constructor //////////////////////////
   /// basis axis
   template<typename T>
-  constexpr Quaternion<T>::Quaternion(vector_type const &xaxis, vector_type const &yaxis, vector_type const &zaxis)
+  constexpr Quaternion<T>::Quaternion(vector_t const &xaxis, vector_t const &yaxis, vector_t const &zaxis)
   {
     if (xaxis(0) + yaxis(1) + zaxis(2) > T(0))
     {

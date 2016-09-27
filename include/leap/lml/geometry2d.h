@@ -171,7 +171,7 @@ namespace leap { namespace lml
   {
     if (f != l && std::next(f) != l && std::next(std::next(f)) != l)
     {
-      bool initial = orientation(*f, *std::next(f), *std::next(std::next(f)));
+      auto initial = orientation(*f, *std::next(f), *std::next(std::next(f)));
 
       for(InputIterator ic = f, ib = std::prev(l), ia = std::prev(std::prev(l)); ic != l; ia = ib, ib = ic, ++ic)
       {

@@ -63,50 +63,19 @@ namespace leap { namespace lml
    * @{
   **/
 
-
-  //|///////////////////// position_type ////////////////////////////////////
-  /// position_type of point
+  //|///////////////////// dim //////////////////////////////////////////////
+  /// dimension of point
   template<typename Point>
-  struct position_type
+  constexpr auto dim() -> decltype(point_traits<Point>::dimension)
   {
-    template<typename, typename = void>
-    struct detail
-    {
-      typedef void type;
-    };
-
-    template<typename T>
-    struct detail<T, std::enable_if_t<point_traits<std::decay_t<T>>::dimension != 0>>
-    {
-      typedef typename std::decay_t<T> type;
-    };
-
-    template<typename T>
-    struct detail<T, std::enable_if_t<point_traits<std::decay_t<decltype(position(std::declval<T&>()))>>::dimension != 0>>
-    {
-      typedef std::decay_t<decltype(position(std::declval<T&>()))> type;
-    };
-
-    using type = typename detail<Point>::type;
-  };
-
-  template<typename Point>
-  using position_type_t = typename position_type<Point>::type;
+    return point_traits<Point>::dimension;
+  }
 
 
   //|///////////////////// coord_type ///////////////////////////////////////
   /// coord_type of point
   template<typename Point>
-  using coord_type_t = std::decay_t<decltype(get<0>(std::declval<position_type_t<Point>&>()))>;
-
-
-  //|///////////////////// dim //////////////////////////////////////////////
-  /// dimension of point
-  template<typename Point>
-  constexpr auto dim() -> decltype(point_traits<position_type_t<Point>>::dimension)
-  {
-    return point_traits<position_type_t<Point>>::dimension;
-  }
+  using coord_type_t = std::decay_t<decltype(get<0>(std::declval<Point&>()))>;
 
 
   //|///////////////////// get //////////////////////////////////////////////

@@ -37,10 +37,7 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef size_t size_type;
       typedef std::array<std::array<T, N>, M> data_type;
-      typedef T& reference;
-      typedef const T& const_reference;
 
     public:
 
@@ -49,8 +46,8 @@ namespace leap { namespace lml
       data_type const &data() const { return m_data; }
 
       // Element Access
-      constexpr const_reference operator()(size_type i, size_type j) const { return m_data[i][j]; }
-      reference operator()(size_type i, size_type j) { return m_data[i][j]; }
+      constexpr T const &operator()(size_t i, size_t j) const { return m_data[i][j]; }
+      T &operator()(size_t i, size_t j) { return m_data[i][j]; }
 
     private:
 

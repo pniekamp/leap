@@ -172,7 +172,7 @@ namespace leap { namespace threadlib
     lock.wait();
   }
 
-  inline __attribute__((always_inline)) SyncLock::~SyncLock()
+  inline SyncLock::~SyncLock()
   {
     switch (m_type)
     {

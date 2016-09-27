@@ -38,7 +38,7 @@ namespace leap { namespace lml
 
   //|///////////////////// pi ///////////////////////////////////////////////
   template<typename T>
-  constexpr T pi() { return 3.141592653589793238462643383279502884; }
+  constexpr T pi() { return T(3.141592653589793238462643383279502884); }
 
 
   //|///////////////////// distsqr //////////////////////////////////////////
@@ -125,7 +125,7 @@ namespace leap { namespace lml
     template<size_t i, size_t dimension, typename Point, std::enable_if_t<i != dimension>* = nullptr>
     int quadrant(Point const &pt)
     {
-      return (get<i>(pt) < 0) * (1 << i) + quadrant<i+1, dimension>(pt);
+      return ((get<i>(pt) < 0) * (1 << (i))) + quadrant<i+1, dimension>(pt);
     }
   }
 

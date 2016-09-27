@@ -112,7 +112,7 @@ void TestBasic()
   cout << "  area2d: " << area(Vec2{0.0, 0.0}, Vec2{10.0, 0.0}, Vec2{5.0, 5.0}) << "\n";
   cout << "  area3d: " << area(Vector3f{0.0f, 0.0f, 2.0f}, Vector3f{10.0f, 0.0f, 2.0f}, Vector3f{5.0f, 5.0f, 2.0f}) << "\n";
 
-  if (!coincident(Vec2{2.5, 7.7}, Vec2{2.5, 7.7}))
+  if (!coincident(Vec2{2.5f, 7.7f}, Vec2{2.5f, 7.7f}))
     cout << "** Should be coincident\n";
 
 //  if (!collinear(Point{2.5, 7.7}, Point{5.0, 15.4}, Point{10.0, 30.8}))
@@ -421,6 +421,9 @@ void TestDelaunay2d()
 
   Delaunay2d::triangulate(&mesh, polygons);
 
+  cout << "  " << mesh.sites().size() << " Sites\n";
+  cout << "  " << mesh.edges().size() << " Edges\n";
+
   cout << endl;
 }
 
@@ -446,6 +449,8 @@ void TestVoronoi2d()
   voronoi.add_sites(P.begin(), P.end());
 
   voronoi.calculate();
+
+  cout << "  " << voronoi.cells().size() << " Cells\n";
 
   cout << endl;
 }

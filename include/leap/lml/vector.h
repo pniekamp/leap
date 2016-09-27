@@ -45,8 +45,8 @@ namespace leap { namespace lml
     public:
 
       typedef T value_type;
-      typedef index_sequence<Indices...> indices_type;
       typedef Vector vector_type;
+      typedef index_sequence<Indices...> indices_type;
 
       static constexpr size_t size() { return sizeof...(Indices); }
 
@@ -158,10 +158,7 @@ namespace leap { namespace lml
     public:
 
       typedef T value_type;
-      typedef size_t size_type;
       typedef std::array<T, N> data_type;
-      typedef T& reference;
-      typedef const T& const_reference;
 
     public:
       Vector() = default;
@@ -171,8 +168,8 @@ namespace leap { namespace lml
       explicit Vector(std::vector<T> const &v);
 
       // Element Access
-      constexpr const_reference operator()(size_type i) const { return m_data[i]; }
-      reference operator()(size_type i) { return m_data[i]; }
+      constexpr T const &operator()(size_t i) const { return m_data[i]; }
+      T &operator()(size_t i) { return m_data[i]; }
 
       // Storage Access
       constexpr data_type const &data() const { return m_data; }
@@ -199,9 +196,8 @@ namespace leap { namespace lml
   //|///////////////////// Vector::Constructor //////////////////////////////
   template<typename T, size_t N>
   constexpr Vector<T, N>::Vector(T k)
+    : m_data(fill(k, make_index_sequence<0, N>()))
   {
-    for(size_type i = 0; i < N; ++i)
-      (*this)(i) = k;
   }
 
 
@@ -217,7 +213,7 @@ namespace leap { namespace lml
   template<typename T, size_t N>
   Vector<T, N>::Vector(std::vector<T> const &v)
   {
-    for(size_type i = 0; i < std::min(N, v.size()); ++i)
+    for(size_t i = 0; i < std::min(N, v.size()); ++i)
       (*this)(i) = v[i];
   }
 

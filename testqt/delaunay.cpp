@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 
     return app.exec();
   }
-  catch(const exception &e)
+  catch(exception &e)
   {
     cout << "** " << e.what() << endl;
   }

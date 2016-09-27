@@ -22,6 +22,7 @@
 #include <type_traits>
 #include <typeinfo>
 #include <deque>
+#include <array>
 #include <atomic>
 #include <cassert>
 

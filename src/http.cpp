@@ -36,7 +36,7 @@ namespace
   {
     static thread_local mt19937 generator(random_device{}());
 
-    return uniform_int_distribution<uint8_t>()(generator);
+    return uniform_int_distribution<int>{0, std::numeric_limits<uint8_t>::max()}(generator);
   }
 
 
@@ -495,7 +495,7 @@ namespace leap { namespace socklib
   //|///////////////////// HTTPBase::add_header /////////////////////////////
   void HTTPBase::add_header(string const &header)
   {
-    string::size_type div = header.find_first_of(':');
+    auto div = header.find_first_of(':');
 
     if (div != string::npos)
     {

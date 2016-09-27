@@ -17,6 +17,18 @@
 
 namespace leap { namespace lml { namespace Voronoi2d
 {
+  // Traits
+
+  //|///////////////////// pos ////////////////////////////////////////////
+  template<typename Site>
+  struct pos
+  {
+    decltype(auto) operator()(Site const &site) const
+    {
+      return site;
+    }
+  };
+
 
   //|--------------------- Cell -------------------------------------------
   //|----------------------------------------------------------------------
@@ -45,12 +57,6 @@ namespace leap { namespace lml { namespace Voronoi2d
       bool visited;
   };
 
-  template<typename T>
-  T const &position(Cell<T> const &cell) noexcept
-  {
-    return cell.site;
-  }
-
 
   //|///////////////////// circle_centre ////////////////////////////////////
   template<typename Point>
@@ -65,7 +71,7 @@ namespace leap { namespace lml { namespace Voronoi2d
   //|--------------------- Voronoi ----------------------------------------
   //|----------------------------------------------------------------------
 
-  template<typename T>
+  template<typename T, class pos = pos<T>>
   class Voronoi
   {
     public:
@@ -89,29 +95,37 @@ namespace leap { namespace lml { namespace Voronoi2d
 
     private:
 
-      Delaunay2d::Mesh<Cell<T>> m_mesh;
+      struct cellpos
+      {
+        decltype(auto) operator()(Cell<T> const &cell) const
+        {
+          return pos()(cell.site);
+        }
+      };
+
+      Delaunay2d::Mesh<Cell<T>, cellpos> m_mesh;
   };
 
 
   //|///////////////////// Voronoi::Constructor//////////////////////////////
-  template<typename T>
-  Voronoi<T>::Voronoi()
+  template<typename T, class pos>
+  Voronoi<T, pos>::Voronoi()
   {
   }
 
 
   //|///////////////////// Voronoi::add_site ////////////////////////////////
-  template<typename T>
-  void Voronoi<T>::add_site(T const &site)
+  template<typename T, class pos>
+  void Voronoi<T, pos>::add_site(T const &site)
   {
     m_mesh.add_site(Cell<T>(site));
   }
 
 
   //|///////////////////// Voronoi::add_sites ////////////////////////////////
-  template<typename T>
+  template<typename T, class pos>
   template<typename InputIterator>
-  void Voronoi<T>::add_sites(InputIterator f, InputIterator l)
+  void Voronoi<T, pos>::add_sites(InputIterator f, InputIterator l)
   {
     for(InputIterator i = f; i != l; ++i)
       m_mesh.add_site(Cell<T>(*i));
@@ -120,8 +134,8 @@ namespace leap { namespace lml { namespace Voronoi2d
 
   //|///////////////////// Voronoi::calculate ///////////////////////////////
   /// voronoi diagram
-  template<typename T>
-  void Voronoi<T>::calculate()
+  template<typename T, class pos>
+  void Voronoi<T, pos>::calculate()
   {
     m_mesh.triangulate();
 
@@ -143,8 +157,8 @@ namespace leap { namespace lml { namespace Voronoi2d
             typename Cell<T>::Neighbour neighbour;
 
             neighbour.cell = curr->dst();
-            neighbour.boundary[0] = circle_centre(curr->org()->site, curr->dst()->site, curr->r_prev()->dst()->site);
-            neighbour.boundary[1] = circle_centre(curr->org()->site, curr->dst()->site, curr->l_next()->dst()->site);
+            neighbour.boundary[0] = circle_centre(pos()(curr->org()->site), pos()(curr->dst()->site), pos()(curr->r_prev()->dst()->site));
+            neighbour.boundary[1] = circle_centre(pos()(curr->org()->site), pos()(curr->dst()->site), pos()(curr->l_next()->dst()->site));
 
             cell->neighbours.push_back(neighbour);
           }

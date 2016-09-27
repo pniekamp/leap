@@ -221,10 +221,10 @@ static void SplineTest()
 {
   CubicSpline<Vector2f> spline({ Vector2(0.0f, 0.0f), Vector2(1.0f, 1.0f), Vector2(5.0f, 15.0f) });
 
-  if (!fcmp(spline.value(0.5), 0.40625f))
+  if (!fcmp(spline.value(0.5f), 0.40625f))
     cout << "** Spline Value Error\n";
 
-  if (!fcmp(spline.derivative(0.5), 0.9375f))
+  if (!fcmp(spline.derivative(0.5f), 0.9375f))
     cout << "** Spline Derivative Error\n";
 }
 
@@ -232,14 +232,14 @@ static void SplineTest()
 //|//////////////////// BezierTest //////////////////////////////////////////
 static void BezierTest()
 {
-  Bezier<Vector2f> bezier({ Vector2(0.0f, 0.0f), Vector2(1.0f, 1.0f), Vector2(5.0f, 15.0f) });
+  Bezier<Vector2f> bezier2({ Vector2(0.0f, 0.0f), Vector2(1.0f, 1.0f), Vector2(5.0f, 15.0f) });
 
-  if (!fcmp(bezier.value(0.4)(0), 0.44f, 1e-3f) || !fcmp(bezier.value(0.4)(1), -0.52f, 1e-3f))
+  if (!fcmp(bezier2.value(0.4f)(0), 0.44f, 1e-3f) || !fcmp(bezier2.value(0.4f)(1), -0.52f, 1e-3f))
     cout << "** Bezier Value Error\n";
 
   Bezier<Vector3d> bezier3({ Vector3(0.0, 0.0, 0.0), Vector3(1.0, 1.0, 1.0), Vector3(5.0, 15.0, 20.0) });
 
-  if (!fcmp(bezier3.value(0.4)(0), 0.44, 1e-3) || !fcmp(bezier3.value(0.4)(1), -0.52, 1e-3) || !fcmp(bezier3.value(0.4)(2), -1.0, 1e-3))
+  if (!fcmp(bezier3.value(0.4f)(0), 0.44, 1e-3) || !fcmp(bezier3.value(0.4f)(1), -0.52, 1e-3) || !fcmp(bezier3.value(0.4f)(2), -1.0, 1e-3))
     cout << "** Bezier3 Value Error\n";
 }
 

@@ -75,7 +75,7 @@ namespace leap { namespace lml
 
     if (initial > 0.99e30)
     {
-      R[0] = u[0] = 0.0;
+      R[0] = u[0] = 0;
     }
     else
     {
@@ -85,10 +85,10 @@ namespace leap { namespace lml
 
     for(size_t i = 1; i <= n-2; ++i)
     {
-      auto sig = (get<0>(points[i]) - get<0>(points[i-1]))/(get<0>(points[i+1]) - get<0>(points[i-1]));
-      auto p = sig * R[i-1] + 2;
+      value_type sig = (get<0>(points[i]) - get<0>(points[i-1]))/(get<0>(points[i+1]) - get<0>(points[i-1]));
+      value_type p = sig * R[i-1] + 2;
 
-      R[i] = (sig-1.0)/p;
+      R[i] = (sig - 1)/p;
 
       u[i] = slope(points[i], points[i+1]) - slope(points[i-1], points[i]);
       u[i] = (6*u[i]/(get<0>(points[i+1]) - get<0>(points[i-1])) - sig*u[i-1])/p;
@@ -96,14 +96,14 @@ namespace leap { namespace lml
 
     if (final > 0.99e30)
     {
-      R[n-1] = 0.0;
+      R[n-1] = 0;
     }
     else
     {
-      auto qn = 0.5;
-      auto un = (3/(get<0>(points[n-1]) - get<0>(points[n-2]))) * (final - slope(points[n-2], points[n-1]));
+      value_type qn = 0.5;
+      value_type un = (3/(get<0>(points[n-1]) - get<0>(points[n-2]))) * (final - slope(points[n-2], points[n-1]));
 
-      R[n-1] = (un - qn * u[n-2]) / (qn * R[n-2] + 1.0);
+      R[n-1] = (un - qn * u[n-2]) / (qn * R[n-2] + 1);
     }
 
     for(int k = n-2; k >= 0; --k)

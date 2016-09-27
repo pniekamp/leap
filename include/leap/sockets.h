@@ -435,7 +435,7 @@ namespace leap { namespace socklib
 
         size_t bytes;
 
-        uint8_t data[];
+        uint8_t data[1];
       };
 
       size_t m_bufferhead;

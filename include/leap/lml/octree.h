@@ -42,7 +42,7 @@ namespace leap { namespace lml
 
     //|///////////////////// bound //////////////////////////////////////////
     template<typename Item>
-    auto bound(Item const &item)
+    decltype(auto) bound(Item const &item)
     {
       return item.box();
     }
@@ -51,9 +51,9 @@ namespace leap { namespace lml
     template<typename Item>
     struct box
     {
-      auto operator()(Item const &item) const
+      decltype(auto) operator()(Item const &item) const
       {
-        return bound(leap::dereference(item));
+        return bound(dereference(item));
       }
     };
 
@@ -76,7 +76,7 @@ namespace leap { namespace lml
           public:
 
             typedef Item item_type;
-            typedef decltype(box()(std::declval<Item&>())) bound_type;
+            typedef std::decay_t<decltype(box()(std::declval<Item&>()))> bound_type;
 
           public:
             normal_iterator();
@@ -116,7 +116,7 @@ namespace leap { namespace lml
         typedef Item item_type;
         typedef Item value_type;
         typedef typename Alloc::template rebind<Node>::other allocator_type;
-        typedef decltype(box()(std::declval<Item&>())) bound_type;
+        typedef std::decay_t<decltype(box()(std::declval<Item&>()))> bound_type;
 
         typedef normal_iterator<Node *> iterator;
         typedef normal_iterator<Node const *> const_iterator;
