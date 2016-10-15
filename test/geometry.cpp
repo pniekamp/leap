@@ -80,7 +80,7 @@ class Vec3 : public VectorView<Vec3, float, 0, 1, 2>
         float x, y, z;
       };
 
-      VectorView<Vector2f, float, 0, 1> xy;
+      Vec2 xy;
     };
 };
 
@@ -152,7 +152,6 @@ void TestBasic()
   d = d + Vector3(1.0f, 2.0f, 3.0f);
   d += Vector3(1.0f, 2.0f, 3.0f);
   d.xy = d.xy + Vector2(1.0f, 2.0f);
-  d.xy += Vector2(1.0f, 2.0f);
 
   vector<Vector2d> P;
   P.push_back(Vector2(0.0, -0.5));

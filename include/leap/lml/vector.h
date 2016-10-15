@@ -71,7 +71,10 @@ namespace leap { namespace lml
 
     protected:
       VectorView() = default;
+      VectorView(VectorView const &) = default;
+      VectorView(VectorView &&) = default;
       VectorView &operator =(VectorView const &) = default;
+      VectorView &operator =(VectorView &&) = default;
   };
 
 
@@ -482,7 +485,7 @@ namespace leap { namespace lml
   //|///////////////////// orthonormalise ////////////////////////////////////////////
   /// orthogonalise & normalise u, v, generate w
   template<typename Vector>
-  void orthonormalise(Vector &u, Vector &v, Vector &w)
+  constexpr void orthonormalise(Vector &u, Vector &v, Vector &w)
   {
     w = orthogonal(u, v);
     u = normalise(u - w * dot(w, u));

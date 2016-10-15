@@ -22,7 +22,6 @@ using namespace leap::lml;
 
 void SwizzleTest();
 
-
 class Vec2 : public VectorView<Vec2, float, 0, 1>
 {
   public:
@@ -46,6 +45,11 @@ class Vec3 : public VectorView<Vec3, float, 0, 1, 2>
   public:
     Vec3(float x, float y, float z)
       : x(x), y(y), z(z)
+    {
+    }
+
+    Vec3(Vec3 const &that)
+      : VectorView(), x(that.x), y(that.y), z(that.z)
     {
     }
 
@@ -89,6 +93,11 @@ class Vec4 : public VectorView<Vec4, float, 0, 1, 2, 3>
   public:
     Vec4(float x, float y, float z, float w = 1.0f)
       : x(x), y(y), z(z), w(w)
+    {
+    }
+
+    Vec4(Vec4 const &that)
+      : VectorView(), x(that.x), y(that.y), z(that.z), w(that.w)
     {
     }
 
@@ -151,10 +160,10 @@ class Rect2 : public BoundView<Rect2, float, 2, 0, 1>
     Vec2 centre() const { return (min + max)/2; }
     Vec2 halfdim() const { return (max - min)/2; }
 
-    VectorView<Vec2, float, 0, 3> const &topleft() const { return (VectorView<Vec2, float, 0, 3>&)(*this); }
-    VectorView<Vec2, float, 2, 3> const &topright() const { return (VectorView<Vec2, float, 2, 3>&)(*this); }
-    VectorView<Vec2, float, 0, 1> const &bottomleft() const { return (VectorView<Vec2, float, 0, 1>&)(*this); }
-    VectorView<Vec2, float, 2, 1> const &bottomright() const { return (VectorView<Vec2, float, 2, 1>&)(*this); }
+    VectorView<Vec2, float, 0, 3> const &topleft() const { return (VectorView<Vec2, float, 0, 3> const &)(*this); }
+    VectorView<Vec2, float, 2, 3> const &topright() const { return (VectorView<Vec2, float, 2, 3> const &)(*this); }
+    VectorView<Vec2, float, 0, 1> const &bottomleft() const { return (VectorView<Vec2, float, 0, 1> const &)(*this); }
+    VectorView<Vec2, float, 2, 1> const &bottomright() const { return (VectorView<Vec2, float, 2, 1> const &)(*this); }
 
     float width() const { return right - left; }
     float height() const { return top - bottom; }
