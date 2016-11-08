@@ -32,7 +32,7 @@ namespace leap { namespace regex
     //|///////////////////// RegExContext::Constructor ////////////////////////////
     RegExContext::RegExContext()
     {
-      startofline = NULL;
+      startofline = nullptr;
     }
 
 
@@ -44,11 +44,11 @@ namespace leap { namespace regex
     RegExState::RegExState(RegExContext *context)
       : context(context)
     {
-      first = last = NULL;
+      first = last = nullptr;
 
       count = 0;
 
-      grouped = false;
+      capture = false;
     }
 
 
@@ -95,7 +95,7 @@ namespace leap { namespace regex
       state.last = str-1;
       state.count = 0;
 
-      if (str == NULL)
+      if (!str)
         return false;
 
       if (m_repeat == RepeatType::ZeroOrOnce || m_repeat == RepeatType::ZeroOrMore)
@@ -360,10 +360,10 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExAlternative::Constructor //////////////////////
-    RegExAlternative::RegExAlternative(RegExCore const &left, RegExCore const &right)
+    RegExAlternative::RegExAlternative(unique_ptr<RegExBase> &&left, unique_ptr<RegExBase> &&right)
     {
-      m_left = left;
-      m_right = right;
+      m_left = std::move(left);
+      m_right = std::move(right);
     }
 
 
@@ -388,14 +388,14 @@ namespace leap { namespace regex
       state.first = str;
 
       // Try left first
-      if (m_left.consider_first(str, state.substate[0]))
+      if (m_left->consider_first(str, state.substate[0]))
       {
         state.last = state.substate[0].last;
         return true;
       }
 
       // Then right
-      if (m_right.consider_first(str, state.substate[1]))
+      if (m_right->consider_first(str, state.substate[1]))
       {
         state.last = state.substate[1].last;
         return true;
@@ -410,7 +410,7 @@ namespace leap { namespace regex
     {
       if (state.substate[0].count != 0)
       {
-        if (m_left.consider_next(state.substate[0]))
+        if (m_left->consider_next(state.substate[0]))
         {
           state.last = state.substate[0].last;
           return true;
@@ -419,7 +419,7 @@ namespace leap { namespace regex
         state.substate[0].count = 0;
 
         // Done with the left, try the right
-        if (m_right.consider_first(state.first, state.substate[1]))
+        if (m_right->consider_first(state.first, state.substate[1]))
         {
           state.last = state.substate[1].last;
           return true;
@@ -428,7 +428,7 @@ namespace leap { namespace regex
 
       if (state.substate[1].count != 0)
       {
-        if (m_right.consider_next(state.substate[1]))
+        if (m_right->consider_next(state.substate[1]))
         {
           state.last = state.substate[1].last;
           return true;
@@ -446,12 +446,12 @@ namespace leap { namespace regex
     //|///////////////////// RegExGroup::Constructor ////////////////////////////
     RegExGroup::RegExGroup(const char *group)
     {
-      m_grouping = true;
+      m_capture = true;
 
       if (group[0] == '?' && group[1] == ':')
       {
         group += 2;
-        m_grouping = false;
+        m_capture = false;
       }
 
       define(group);
@@ -467,7 +467,7 @@ namespace leap { namespace regex
     //|///////////////////// RegExGroup::consider_first /////////////////////////
     bool RegExGroup::consider_first(const char *str, RegExState &state) const
     {
-      state.grouped = m_grouping;
+      state.capture = m_capture;
 
       return RegExCore::consider_first(str, state);
     }
@@ -527,16 +527,17 @@ namespace leap { namespace regex
 
         else if (*str == '|') // Alternative
         {
-          RegExCore left, right;
+          auto left = make_unique<RegExCore>();
+          auto right = make_unique<RegExCore>();
 
           // Move all our conditions into the left
-          left.define(m_conditions);
+          left->m_conditions = std::move(m_conditions);
 
           // All the rest goes on the right
-          right.define(str+1);
+          right->define(str+1);
 
           m_conditions.clear();
-          m_conditions.push_back(make_unique<RegExAlternative>(left, right));
+          m_conditions.push_back(make_unique<RegExAlternative>(std::move(left), std::move(right)));
 
           break;
         }
@@ -605,13 +606,6 @@ namespace leap { namespace regex
 
         ++str;
       }
-    }
-
-
-    //|///////////////////// RegExCore::define //////////////////////////////////
-    void RegExCore::define(std::vector<shared_ptr<RegExBase>> const &rex)
-    {
-      m_conditions = rex;
     }
 
 
@@ -756,37 +750,32 @@ namespace leap { namespace regex
 
 
 
-  //|--------------------- GroupVisitor ---------------------------------------
+  //|--------------------- CaptureVisitor -------------------------------------
   //|--------------------------------------------------------------------------
-  class GroupVisitor : public RegExImpl::RegExStateVisitor
+  class CaptureVisitor : public RegExImpl::RegExStateVisitor
   {
     public:
-      GroupVisitor(std::vector<std::string> *groups)
+      CaptureVisitor(vector<string> *groups)
       {
         m_groups = groups;
       }
 
-      virtual ~GroupVisitor()
-      {
-      }
-
       void visit(RegExImpl::RegExState &state)
       {
-        // only matching matched groups
-        if (state.grouped == false || state.count == 0)
-          return;
-
-        m_groups->push_back(std::string(state.first, state.last+1));
+        if (state.capture == true|| state.count != 0)
+        {
+          m_groups->push_back(string(state.first, state.last+1));
+        }
       }
 
-      std::vector<std::string> *m_groups;
+      vector<string> *m_groups;
   };
 
 
 
   //|--------------------- match ----------------------------------------------
   //|--------------------------------------------------------------------------
-  bool match(RegEx const &rex, const char *str, std::vector<std::string> *groups)
+  bool match(RegEx const &rex, const char *str, vector<string> *groups)
   {
     RegExImpl::RegExContext context;
 
@@ -794,19 +783,15 @@ namespace leap { namespace regex
 
     RegExImpl::RegExState state(&context);
 
-    //
-    // test for match
-    //
     if (rex.m_regex.consider_first(str, state))
     {
-      if (groups != NULL)
+      if (groups)
       {
-        //
         // Transfer the marked groups into a vector
-        //
-        GroupVisitor groupvisitor(groups);
 
-        state.accept(groupvisitor);
+        CaptureVisitor capturevisitor(groups);
+
+        state.accept(capturevisitor);
       }
 
       return true;
@@ -818,29 +803,25 @@ namespace leap { namespace regex
 
   //|--------------------- search ---------------------------------------------
   //|--------------------------------------------------------------------------
-  bool search(RegEx const &rex, const char *str, std::vector<std::string> *groups)
+  bool search(RegEx const &rex, const char *str, vector<string> *groups)
   {
     RegExImpl::RegExContext context;
 
     context.startofline = str;
 
-    //
-    // Iterate through looking for a match
-    //
     while (*str != 0)
     {
       RegExImpl::RegExState state(&context);
 
       if (rex.m_regex.consider_first(str, state))
       {
-        if (groups != NULL)
+        if (groups)
         {
-          //
           // Transfer the marked groups into a vector
-          //
-          GroupVisitor groupvisitor(groups);
 
-          state.accept(groupvisitor);
+          CaptureVisitor capturevisitor(groups);
+
+          state.accept(capturevisitor);
         }
 
         return true;

@@ -49,7 +49,7 @@ class Vec3 : public VectorView<Vec3, float, 0, 1, 2>
     }
 
     Vec3(Vec3 const &that)
-      : VectorView(), x(that.x), y(that.y), z(that.z)
+      : Vec3(that.x, that.y, that.z)
     {
     }
 
@@ -97,7 +97,7 @@ class Vec4 : public VectorView<Vec4, float, 0, 1, 2, 3>
     }
 
     Vec4(Vec4 const &that)
-      : VectorView(), x(that.x), y(that.y), z(that.z), w(that.w)
+      : Vec4(that.x, that.y, that.z, that.w)
     {
     }
 

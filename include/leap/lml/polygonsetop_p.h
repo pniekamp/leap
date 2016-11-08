@@ -118,8 +118,8 @@ namespace leap { namespace lml { namespace PolygonSetOp
           bool operator ==(normal_iterator const &that) const { return m_node == that.m_node; }
           bool operator !=(normal_iterator const &that) const { return m_node != that.m_node; }
 
-          Node<T> &operator *() { return *m_node; }
-          Node<T> *operator ->() { return &*m_node; }
+          Node<T> &operator *() const { return *m_node; }
+          Node<T> *operator ->() const { return &*m_node; }
 
           normal_iterator &operator++()
           {

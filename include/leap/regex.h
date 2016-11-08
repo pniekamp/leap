@@ -72,7 +72,7 @@ namespace leap { namespace regex
 
         size_t count;
 
-        bool grouped;
+        bool capture;
 
         std::vector<RegExState> substate;
 
@@ -132,7 +132,6 @@ namespace leap { namespace regex
         virtual ~RegExCore();
 
         void define(const char *rex);
-        void define(std::vector<std::shared_ptr<RegExBase>> const &rex);
 
       public:
 
@@ -141,7 +140,7 @@ namespace leap { namespace regex
 
       private:
 
-        std::vector<std::shared_ptr<RegExBase>> m_conditions;
+        std::vector<std::unique_ptr<RegExBase>> m_conditions;
     };
 
 
@@ -156,7 +155,7 @@ namespace leap { namespace regex
 
       private:
 
-        bool m_grouping;
+        bool m_capture;
     };
 
 
@@ -181,7 +180,7 @@ namespace leap { namespace regex
     class RegExAlternative : public RegExBase
     {
       public:
-        RegExAlternative(RegExCore const &left, RegExCore const &right);
+        RegExAlternative(std::unique_ptr<RegExBase> &&left, std::unique_ptr<RegExBase> &&right);
         virtual ~RegExAlternative();
 
       public:
@@ -193,8 +192,8 @@ namespace leap { namespace regex
 
       private:
 
-        RegExCore m_left;
-        RegExCore m_right;
+        std::unique_ptr<RegExBase> m_left;
+        std::unique_ptr<RegExBase> m_right;
     };
 
 
