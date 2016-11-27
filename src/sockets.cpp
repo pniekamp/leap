@@ -14,7 +14,11 @@
 
 #include "leap/sockets.h"
 #include "leap/util.h"
+#include "leap/concurrentqueue.h"
+#include <atomic>
 #include <cstring>
+#include <mutex>
+#include <chrono>
 #include <cassert>
 
 using namespace std;
@@ -39,6 +43,7 @@ using namespace leap::threadlib;
 #  define EISCONN WSAEISCONN
 #  undef ECONNRESET
 #  define ECONNRESET WSAECONNRESET
+#  define poll WSAPoll
 #else
 #  include <errno.h>
 #  include <netdb.h>
@@ -48,6 +53,7 @@ using namespace leap::threadlib;
 #  include <sys/ioctl.h>
 #  include <net/if.h>
 #  include <unistd.h>
+#  include <poll.h>
 #  define INVALID_SOCKET -1
 #  define SOCKET_ERROR -1
 #  define HOSTENT hostent
@@ -55,6 +61,225 @@ using namespace leap::threadlib;
 #  define closesocket(s) ::close(s)
 #  define GetLastError() errno
 #endif
+
+#ifdef _WIN32
+namespace
+{
+  int socketpair(int domain, int type, int protocol, SOCKET sv[2])
+  {
+    sockaddr_t addr = {};
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    auto listeningsocket = socket(AF_INET, type, IPPROTO_TCP);
+
+    int one = 1;
+    setsockopt(listeningsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
+
+    bind(listeningsocket, (sockaddr*)&addr, sizeof(addr));
+
+    socklen_t addrlen = sizeof(addr);
+    getsockname(listeningsocket, (sockaddr*)&addr, &addrlen);
+
+    listen(listeningsocket, 1);
+
+    sv[0] = socket(AF_INET, type, protocol);
+
+    connect(sv[0], (sockaddr*)&addr, sizeof(addr));
+
+    sv[1] = accept(listeningsocket, 0, 0);
+
+    closesocket(listeningsocket);
+
+    return (sv[0] != INVALID_SOCKET && sv[1] != INVALID_SOCKET);
+  }
+}
+#endif
+
+namespace
+{
+  //|----------- SocketWaitThread -------------------
+  //|------------------------------------------------
+
+  class SocketWaitThread
+  {
+    public:
+
+      SocketWaitThread();
+      ~SocketWaitThread();
+
+      template<typename Func>
+      void await(SOCKET handle, short int events, Func &&func, int timeout = -1);
+
+      void signal(SOCKET handle);
+
+    private:
+
+      long await_thread();
+
+    private:
+
+      enum { Exit = 0, Signal = 1 };
+
+      SOCKET m_cnc[2];
+
+      vector<pollfd> m_fds;
+      vector<function<void()>> m_funcs;
+
+      vector<SOCKET> m_signals;
+
+      vector<pair<chrono::steady_clock::time_point, SOCKET>> m_timeouts;
+
+      CriticalSection m_mutex;
+
+      ThreadControl m_threadcontrol;
+  };
+
+  //|///////////////////// Constructor ////////////////////////////
+  SocketWaitThread::SocketWaitThread()
+  {
+    socketpair(AF_UNIX, SOCK_STREAM, 0, m_cnc);
+
+    m_threadcontrol.create_thread([=]() { return await_thread(); });
+  }
+
+  //|///////////////////// Destructor /////////////////////////////
+  SocketWaitThread::~SocketWaitThread()
+  {
+    send(m_cnc[1], "\0", 1, MSG_NOSIGNAL);
+
+    m_threadcontrol.join_threads();
+  }
+
+  //|///////////////////// await //////////////////////////////////
+  template<typename Func>
+  void SocketWaitThread::await(SOCKET handle, short events, Func &&func, int timeout)
+  {
+    {
+      SyncLock M(m_mutex);
+
+      m_fds.push_back({ handle, events, 0 });
+      m_funcs.emplace_back(std::forward<Func>(func));
+
+      if (timeout >= 0)
+      {
+        m_timeouts.emplace_back(chrono::steady_clock::now() + chrono::milliseconds(timeout), handle);
+
+      }
+    }
+  }
+
+  //|///////////////////// signal /////////////////////////////////
+  void SocketWaitThread::signal(SOCKET handle)
+  {
+    {
+      SyncLock M(m_mutex);
+
+      m_signals.push_back(handle);
+    }
+
+    send(m_cnc[1], "\1", 1, MSG_NOSIGNAL);
+  }
+
+  //|///////////////////// await_thread /////////////////////////////////
+  long SocketWaitThread::await_thread()
+  {
+    vector<SOCKET> sigs;
+    vector<pair<chrono::steady_clock::time_point, SOCKET>> timeouts;
+
+    vector<pollfd> fds(1, { m_cnc[0], POLLIN, 0 });
+    vector<function<void()>> funcs(1, nullptr);
+
+    while (true)
+    {
+      {
+        SyncLock M(m_mutex);
+
+        fds.insert(fds.end(), m_fds.begin(), m_fds.end());
+        funcs.insert(funcs.end(), make_move_iterator(m_funcs.begin()), make_move_iterator(m_funcs.end()));
+
+        m_fds.clear();
+        m_funcs.clear();
+
+        for(auto &timeout : m_timeouts)
+        {
+          auto insertpos = timeouts.begin();
+          while (insertpos != timeouts.end() && insertpos->first < timeout.first)
+            ++insertpos;
+
+          timeouts.insert(insertpos, timeout);
+        }
+
+        m_timeouts.clear();
+      }
+
+      sigs.clear();
+
+      int timeout = -1;
+
+      if (timeouts.size() != 0)
+      {
+        timeout = chrono::duration_cast<chrono::milliseconds>(timeouts.front().first - chrono::steady_clock::now()).count();
+
+        if (timeout < 0)
+        {
+          timeout = 0;
+          sigs.push_back(timeouts.front().second);
+        }
+      }
+
+      poll(fds.data(), fds.size(), timeout);
+
+      if (fds[0].revents != 0)
+      {
+        char cnc;
+        recv(m_cnc[0], &cnc, sizeof(cnc), 0);
+
+        if (cnc == Exit)
+          return 0;
+
+        if (cnc == Signal)
+        {
+          SyncLock M(m_mutex);
+
+          sigs.insert(sigs.end(), m_signals.begin(), m_signals.end());
+
+          m_signals.clear();
+        }
+
+        fds[0].revents = 0;
+      }
+
+      for(size_t i = 1; i < fds.size(); )
+      {
+        if (fds[i].revents != 0 || find(sigs.begin(), sigs.end(), fds[i].fd) != sigs.end())
+        {
+          funcs[i]();
+
+          timeouts.erase(remove_if(timeouts.begin(), timeouts.end(), [&](auto &tm) { return tm.second == fds[i].fd; }), timeouts.end());
+
+          fds.erase(fds.begin() + i);
+          funcs.erase(funcs.begin() + i);
+        }
+        else
+          ++i;
+      }
+    }
+  }
+
+
+  SocketWaitThread &socket_wait_thread()
+  {
+    static std::once_flag onceflag;
+    static std::unique_ptr<SocketWaitThread> instance;
+
+    call_once(onceflag, [] { instance.reset(new SocketWaitThread); });
+
+    return *instance.get();
+  }
+}
 
 namespace leap { namespace socklib
 {
@@ -97,7 +322,7 @@ namespace leap { namespace socklib
   template<class Ring>
   static size_t ring_push(Ring *ring, size_t *tail, void *data, size_t n)
   {
-    if (data != nullptr)
+    if (data)
     {
       size_t tailspace = ring->size() - *tail;
 
@@ -118,7 +343,7 @@ namespace leap { namespace socklib
   template<class Ring>
   static size_t ring_pop(Ring *ring, size_t *head, void *data, size_t n)
   {
-    if (data != nullptr)
+    if (data)
     {
       size_t tailspace = ring->size() - *head;
 
@@ -152,9 +377,19 @@ namespace leap { namespace socklib
     t.tv_sec = timeout / 1000;
     t.tv_usec = (timeout % 1000) * 1000;
 
-    return (::select(max(readfd, writefd)+1, &readfds, &writefds, NULL, &t) != 0);
+    return (::select(max(readfd, writefd)+1, &readfds, &writefds, 0, &t) != 0);
   }
 
+  //|///////////////////// setnonblocking ///////////////////////////////////
+  static void setnonblocking(SOCKET socket)
+  {
+#ifdef _WIN32
+    u_long nonblocking = true;
+    ioctlsocket(socket, FIONBIO, &nonblocking);
+#else
+    fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
+#endif
+  }
 
 
   //|--------------------- SocketBase ---------------------------------------
@@ -179,7 +414,7 @@ namespace leap { namespace socklib
   ///
   bool SocketBase::connected() const
   {
-    return (m_status == SocketStatus::Connected && m_connectedsocket != INVALID_SOCKET);
+    return (m_status == SocketStatus::Connected);
   }
 
 
@@ -229,7 +464,7 @@ namespace leap { namespace socklib
   #ifdef _WIN32
       char *lpMsgBuf;
 
-      FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, m_errorcondition, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
+      FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, 0, m_errorcondition, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, 0);
 
       for(char *ch = lpMsgBuf; *ch != 0; ++ch)
         *ch = max(*ch, ' ');
@@ -291,6 +526,8 @@ namespace leap { namespace socklib
     m_bufferhead = 0;
     m_buffertail = 0;
     m_buffercount = 0;
+
+    m_closesignal = false;
   }
 
 
@@ -300,9 +537,6 @@ namespace leap { namespace socklib
   ///
   size_t StreamSocket::bytes_available() const
   {
-    if (!connected())
-      return 0;
-
     return m_buffercount;
   }
 
@@ -359,10 +593,9 @@ namespace leap { namespace socklib
   ///
   void StreamSocket::close()
   {
-    if (m_connectedsocket != INVALID_SOCKET)
-      closesocket(m_connectedsocket);
+    m_closesignal = true;
 
-    m_connectedsocket = INVALID_SOCKET;
+    socket_wait_thread().signal(m_connectedsocket);
   }
 
 
@@ -442,93 +675,83 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// StreamSocket::connected_loop /////////////////////
-  //
-  // Loop until socket is disconnected. For use by ConnectionThreads
-  // Moves data from the connected socket into the receive buffer.
-  //
-  void StreamSocket::connected_loop(Waitable &cancel)
+  //|///////////////////// StreamSocket::init_stream ////////////////////////
+  void StreamSocket::init_stream()
   {
-    // Assume we're now connected...
     m_bufferhead = 0;
     m_buffertail = 0;
     m_buffercount = 0;
     m_errorcondition = 0;
+    m_closesignal = false;
     m_status = SocketStatus::Connected;
 
     m_activity.release();
+  }
 
-    //
-    // While thread is running
-    //
 
-    while (!cancel)
+  //|///////////////////// StreamSocket::read_stream ////////////////////////
+  //
+  // Moves data from the connected socket into the receive buffer.
+  //
+  void StreamSocket::read_stream()
+  {   
+    size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
+
+    // No Room in buffer... wait a while
+    if (buffercount == m_buffer.size())
     {
-      if (m_connectedsocket == INVALID_SOCKET)
-        break;
+      sleep_for(32);
+      return;
+    }
 
-      if (!select(500, m_connectedsocket, -1))
-        continue;
+    void *buffer = m_buffer.data() + m_buffertail;
 
-      size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
+    size_t bufbytes = min(m_buffer.size() - buffercount, m_buffer.size() - m_buffertail);
 
-      // No Room in buffer... wait a while
-      if (buffercount == m_buffer.size())
+    //
+    // Receive any data that is available
+    //
+
+    ssize_t bytes = recv(m_connectedsocket, (char*)buffer, bufbytes, 0);
+
+    // check if we are no longer connected...
+    if (bytes == 0 || m_closesignal)
+    {
+      m_errorcondition = 0;
+      m_status = SocketStatus::Cactus;
+
+      m_activity.release();
+    }
+
+    // or an error occured...
+    else if (bytes == SOCKET_ERROR)
+    {
+      auto result = GetLastError();
+
+      // was it a fatal error that results in a disconnect ?
+      if (result != EMSGSIZE && result != EWOULDBLOCK)
       {
-        sleep_for(32);
-        continue;
-      }
-
-      void *buffer = m_buffer.data() + m_buffertail;
-
-      size_t bufbytes = min(m_buffer.size() - buffercount, m_buffer.size() - m_buffertail);
-
-      //
-      // Receive any data that is available
-      //
-
-      ssize_t bytes = recv(m_connectedsocket, (char*)buffer, bufbytes, 0);
-
-      // check if we are no longer connected...
-      if (bytes == 0)
-      {
-        m_errorcondition = 0;
-        break;
-      }
-
-      // or an error occured...
-      else if (bytes == SOCKET_ERROR)
-      {
-        auto result = GetLastError();
-
-        // was it a fatal error that results in a disconnect ?
-        if (result != EMSGSIZE && result != EWOULDBLOCK)
-        {
-          m_errorcondition = result;
-          break;
-        }
-      }
-
-      else
-      {
-        //
-        // Got some data.. update the read buffer
-        //
-
-        ring_push(&m_buffer, &m_buffertail, nullptr, bytes);
-
-        // update count (compare-and-swap)
-        while (!m_buffercount.compare_exchange_weak(buffercount, buffercount + bytes))
-          ;
+        m_errorcondition = result;
+        m_status = SocketStatus::Cactus;
 
         m_activity.release();
       }
     }
 
-    // Disconnect now...
-    m_status = SocketStatus::Cactus;
+    else
+    {
+      //
+      // Got some data.. update the read buffer
+      //
 
-    m_activity.release();
+      ring_push(&m_buffer, &m_buffertail, nullptr, bytes);
+
+      // update count (compare-and-swap)
+      while (!m_buffercount.compare_exchange_weak(buffercount, buffercount + bytes))
+        ;
+
+      m_activity.release();
+    }
   }
 
 
@@ -543,7 +766,6 @@ namespace leap { namespace socklib
 
 
 
-
   //|--------------------- ServerSocket -------------------------------------
   //|------------------------------------------------------------------------
 
@@ -551,8 +773,10 @@ namespace leap { namespace socklib
   //|///////////////////// ServerSocket::Constructor ////////////////////////
   ServerSocket::ServerSocket()
   {
+    m_port = 0;
     m_options = 0;
     m_listeningsocket = INVALID_SOCKET;
+    m_destroysignal = false;
   }
 
 
@@ -607,6 +831,7 @@ namespace leap { namespace socklib
   //|
   bool ServerSocket::create(unsigned int port, const char *options)
   {
+    assert(m_listeningsocket == INVALID_SOCKET);
     assert(m_status == SocketStatus::Unborn || m_status == SocketStatus::Dead);
 
     // Parse out the options
@@ -619,15 +844,20 @@ namespace leap { namespace socklib
     // Initialise and Create
     //
 
-    memset(&m_sockaddr, 0, sizeof(m_sockaddr));
+    m_port = port;
 
-    m_sockaddr.sin_family = AF_INET;
-    m_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_sockaddr.sin_port = htons((u_short)port);
+    if (!create_and_bind())
+    {
+      m_status = SocketStatus::Dead;
 
-    m_status = SocketStatus::Unborn;
+      throw socket_error("Error Binding Server Socket (" + toa(m_errorcondition) + ")");
+    }
 
-    m_threadcontrol.create_thread(this, &ServerSocket::ServerSocketThread);
+    m_status = SocketStatus::Created;
+
+    handle_created();
+
+    socket_wait_thread().signal(m_listeningsocket);
 
     return true;
   }
@@ -642,6 +872,7 @@ namespace leap { namespace socklib
   ///
   bool ServerSocket::attach(socket_t socket, const char *options)
   {
+    assert(m_listeningsocket == INVALID_SOCKET);
     assert(m_status == SocketStatus::Unborn || m_status == SocketStatus::Dead);
 
     // Parse the options string
@@ -654,17 +885,15 @@ namespace leap { namespace socklib
     // Initialise and Create
     //
 
-    memset(&m_sockaddr, 0, sizeof(m_sockaddr));
+    m_port = 0;
 
     m_connectedsocket = socket.sid;
 
-    m_status = SocketStatus::Unborn;
+    m_status = SocketStatus::Created;
 
-    m_threadcontrol.create_thread(this, &ServerSocket::ServerSocketThread);
+    handle_created();
 
-    // Wait until socket attachs fully
-    while (status() == SocketStatus::Unborn)
-      wait_on_activity(100);
+    socket_wait_thread().signal(m_connectedsocket);
 
     return true;
   }
@@ -673,7 +902,19 @@ namespace leap { namespace socklib
   //|///////////////////// ServerSocket::destroy ////////////////////////////
   void ServerSocket::destroy()
   {
-    m_threadcontrol.join_threads();
+    m_destroysignal = true;
+
+    while (m_status != SocketStatus::Unborn && m_status != SocketStatus::Dead)
+    {
+      close();
+      socket_wait_thread().signal(m_listeningsocket);
+
+      sleep_for(32);
+    }
+
+    m_destroysignal = false;
+
+    close_listener();
 
     StreamSocket::destroy();
   }
@@ -682,59 +923,51 @@ namespace leap { namespace socklib
   //|///////////////////// ServerSocket::create_and_bind ////////////////////
   bool ServerSocket::create_and_bind()
   {
+    sockaddr_t addr = {};
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons((u_short)m_port);
+
     //
     // Create a socket that listens for connections
     //
 
-    m_listeningsocket = ::socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    m_listeningsocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
     if (m_listeningsocket == INVALID_SOCKET)
     {
       m_errorcondition = GetLastError();
+
       return false;
     }
+
+    setnonblocking(m_listeningsocket);
 
     //
     // Bind the listening socket to the port number
     //
 
-    if (::bind(m_listeningsocket, (sockaddr*)&(m_sockaddr), sizeof(m_sockaddr)) != 0)
+    if (bind(m_listeningsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
     {
       m_errorcondition = GetLastError();
+
+      close_listener();
+
       return false;
     }
 
-    // Set socket to non-blocking mode
-  #ifdef _WIN32
-    u_long nonblocking = true;
-    ioctlsocket(m_listeningsocket, FIONBIO, &nonblocking);
-  #else
-    fcntl(m_listeningsocket, F_SETFL, fcntl(m_listeningsocket, F_GETFL) | O_NONBLOCK);
-  #endif
-
-    return true;
-  }
-
-
-  //|///////////////////// ServerSocket::listen_and_accept //////////////////
-  bool ServerSocket::listen_and_accept()
-  {
     //
     // Set the socket to listen for incomming connections
     //
 
-    if (::listen(m_listeningsocket, 1) == SOCKET_ERROR)
+    if (listen(m_listeningsocket, 1) == SOCKET_ERROR)
     {
       m_errorcondition = GetLastError();
+
+      close_listener();
+
       return false;
-    }
-
-    // Accept an incomming connection
-    m_connectedsocket = accept(m_listeningsocket, NULL, NULL);
-
-    if ((m_options & KeepAlive) != 0)
-    {
-      int one = 1;
-      setsockopt(m_connectedsocket, SOL_SOCKET, SO_KEEPALIVE, (const char *)&one, sizeof(one));
     }
 
     return true;
@@ -761,58 +994,67 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// ServerSocket::ServerSocketThread /////////////////
-  //
-  // Server Thread... Connects and reconnects server socket
-  //
-  long ServerSocket::ServerSocketThread()
+  //|///////////////////// ServerSocket::created ////////////////////////////
+  void ServerSocket::handle_created()
   {
+    if (m_destroysignal)
+    {
+      m_status = SocketStatus::Dead;
+
+      return;
+    }
+
     if (m_options & Connectable)
     {
-      if (!create_and_bind())
-      {
-        m_status = SocketStatus::Dead;
+      m_connectedsocket = accept(m_listeningsocket, 0, 0);
 
-        return 0;
+      if (m_connectedsocket == INVALID_SOCKET)
+      {
+        socket_wait_thread().await(m_listeningsocket, POLLIN, [=]() { handle_created(); });
       }
     }
 
-    m_status = SocketStatus::Created;
-
-    while (true)
+    if (m_connectedsocket != INVALID_SOCKET)
     {
-      if (m_options & Connectable)
+      setnonblocking(m_connectedsocket);
+
+      if ((m_options & KeepAlive) != 0)
       {
-        listen_and_accept();
+        int one = 1;
+        setsockopt(m_connectedsocket, SOL_SOCKET, SO_KEEPALIVE, (const char *)&one, sizeof(one));
       }
 
-      if (m_connectedsocket != INVALID_SOCKET)
-      {
-        //
-        // Socket Connected
-        //
+      init_stream();
 
-        connected_loop(m_threadcontrol.terminate());
-
-        close_and_invalidate();
-
-        if (!(m_options & Connectable))
-          break;
-      }
-
-      sleep_til(m_threadcontrol.terminate(), 1000);
-
-      if (m_threadcontrol.terminating())
-        break;
+      handle_connected();
     }
-
-    close_listener();
-
-    m_status = SocketStatus::Dead;
-
-    return 0;
   }
 
+
+  //|///////////////////// ServerSocket::connected //////////////////////////
+  void ServerSocket::handle_connected()
+  {
+    read_stream();
+
+    if (m_status == SocketStatus::Connected)
+    {
+      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
+    }
+
+    if (m_status == SocketStatus::Cactus)
+    {
+      close_and_invalidate();
+
+      if (m_options & Connectable)
+      {
+        handle_created();
+      }
+      else
+      {
+        m_status = SocketStatus::Dead;
+      }
+    }
+  }
 
 
 
@@ -823,7 +1065,9 @@ namespace leap { namespace socklib
   //|///////////////////// ClientSocket::Constructor ////////////////////////
   ClientSocket::ClientSocket()
   {
+    m_port = 0;
     m_options = 0;
+    m_destroysignal = false;
   }
 
 
@@ -883,32 +1127,10 @@ namespace leap { namespace socklib
     // Initialise and Create
     //
 
-    memset(&m_sockaddr, 0, sizeof(m_sockaddr));
+    m_port = port;
+    m_address = ipaddress;
 
-    m_sockaddr.sin_family = AF_INET;
-    m_sockaddr.sin_addr.s_addr = 0;
-    m_sockaddr.sin_port = htons((u_short)port);
-
-    // Breakdown the ip address
-
-    if (ipaddress != NULL)
-    {
-      m_sockaddr.sin_addr.s_addr = inet_addr(ipaddress);
-      if (m_sockaddr.sin_addr.s_addr == INADDR_NONE)
-      {
-        //
-        // Convert a name to an ip address
-        //
-
-        HOSTENT *lphost = gethostbyname(ipaddress);
-        if (lphost != NULL)
-          m_sockaddr.sin_addr.s_addr = ((IN_ADDR*)lphost->h_addr)->s_addr;
-      }
-    }
-
-    m_status = SocketStatus::Unborn;
-
-    m_threadcontrol.create_thread(this, &ClientSocket::ClientSocketThread);
+    m_status = SocketStatus::Created;
 
     return true;
   }
@@ -941,7 +1163,14 @@ namespace leap { namespace socklib
   ///
   bool ClientSocket::connect()
   {
-    m_connect.set();
+    if (!m_connect)
+    {
+      m_connect.set();
+
+      handle_created();
+
+      socket_wait_thread().signal(m_connectedsocket);
+    }
 
     return connected();
   }
@@ -950,7 +1179,24 @@ namespace leap { namespace socklib
   //|///////////////////// ClientSocket::destroy ////////////////////////////
   void ClientSocket::destroy()
   {
-    m_threadcontrol.join_threads();
+    m_destroysignal = true;
+
+    while (m_connect)
+    {
+      close();
+
+      sleep_for(32);
+    }
+
+    while (m_status != SocketStatus::Unborn && m_status != SocketStatus::Dead)
+    {
+      socket_wait_thread().await(m_connectedsocket, 0, [=]() { handle_created(); });
+      socket_wait_thread().signal(m_connectedsocket);
+
+      sleep_for(32);
+    }
+
+    m_destroysignal = false;
 
     StreamSocket::destroy();
   }
@@ -963,12 +1209,16 @@ namespace leap { namespace socklib
     // Create the Client Socket
     //
 
-    m_connectedsocket = ::socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    m_connectedsocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
     if (m_connectedsocket == INVALID_SOCKET)
     {
       m_errorcondition = GetLastError();
+
       return false;
     }
+
+    setnonblocking(m_connectedsocket);
 
     // keepalive option
     if ((m_options & keepalive) != 0)
@@ -977,14 +1227,6 @@ namespace leap { namespace socklib
       setsockopt(m_connectedsocket, SOL_SOCKET, SO_KEEPALIVE, (const char *)&one, sizeof(one));
     }
 
-    // Set socket to non-blocking mode
-  #ifdef _WIN32
-    u_long nonblocking = true;
-    ioctlsocket(m_connectedsocket, FIONBIO, &nonblocking);
-  #else
-    fcntl(m_connectedsocket, F_SETFL, fcntl(m_connectedsocket, F_GETFL) | O_NONBLOCK);
-  #endif
-
     return true;
   }
 
@@ -992,11 +1234,31 @@ namespace leap { namespace socklib
   //|///////////////////// ClientSocket::connect_socket /////////////////////
   bool ClientSocket::connect_socket()
   {
+    sockaddr_t addr = {};
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = 0;
+    addr.sin_port = htons((u_short)m_port);
+
+    // Breakdown the ip address
+
+    addr.sin_addr.s_addr = inet_addr(m_address.c_str());
+
+    if (addr.sin_addr.s_addr == INADDR_NONE)
+    {
+      // Convert a name to an ip address
+
+      if (auto host = gethostbyname(m_address.c_str()))
+      {
+        addr.sin_addr.s_addr = ((IN_ADDR*)host->h_addr)->s_addr;
+      }
+    }
+
     //
     // Connect the Client Socket
     //
 
-    if (::connect(m_connectedsocket, (sockaddr*)&(m_sockaddr), sizeof(m_sockaddr)) == 0)
+    if (::connect(m_connectedsocket, (sockaddr*)&addr, sizeof(addr)) == 0)
       return true;
 
     auto result = GetLastError();
@@ -1005,32 +1267,15 @@ namespace leap { namespace socklib
     {
       m_errorcondition = result;
 
-      close_socket();
-
       return false;
     }
 
-    if (!select(500, -1, m_connectedsocket))
-      return false;
-
-    socklen_t resultlen = sizeof(result);
-    getsockopt(m_connectedsocket, SOL_SOCKET, SO_ERROR, (char*)&result, &resultlen);
-
-    if (result != 0)
-    {
-      m_errorcondition = result;
-
-      close_socket();
-
-      return false;
-    }
-
-    return true;
+    return (result == EISCONN);
   }
 
 
-  //|///////////////////// ClientSocket::close_socket ///////////////////////
-  void ClientSocket::close_socket()
+  //|///////////////////// ClientSocket::close_and_invalidate ///////////////
+  void ClientSocket::close_and_invalidate()
   {
     if (m_connectedsocket != INVALID_SOCKET)
       closesocket(m_connectedsocket);
@@ -1039,61 +1284,63 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// ClientSocket::ClientSocketThread /////////////////
-  //
-  // Client Socket Connection Thread
-  //
-  long ClientSocket::ClientSocketThread()
+  //|///////////////////// ClientSocket::handle_created /////////////////////
+  void ClientSocket::handle_created()
   {
-    WaitGroup events;
-    events.add(m_connect);
-    events.add(m_threadcontrol.terminate());
-
-    m_status = SocketStatus::Created;
-
-    while (true)
+    if (m_destroysignal)
     {
-      if (m_connect)
-      {
-        if (m_connectedsocket == INVALID_SOCKET)
-        {
-          if (!create_socket())
-          {
-            m_status = SocketStatus::Dead;
+      m_status = SocketStatus::Dead;
 
-            return 0;
-          }
-        }
+      m_connect.reset();
 
-        if (connect_socket())
-        {
-          //
-          // Socket Connected
-          //
-
-          connected_loop(m_threadcontrol.terminate());
-
-          close_socket();
-
-          m_connect.reset();
-
-          m_activity.release();
-        }
-
-        sleep_til(m_threadcontrol.terminate(), 500);
-      }
-
-      sleep_any(events);
-
-      if (m_threadcontrol.terminating())
-        break;
+      return;
     }
 
-    m_status = SocketStatus::Dead;
+    if (m_connect)
+    {
+      if (m_connectedsocket == INVALID_SOCKET)
+      {
+        if (!create_socket())
+        {
+          m_status = SocketStatus::Dead;
 
-    return 0;
+          return;
+        }
+      }
+
+      if (connect_socket())
+      {
+        init_stream();
+
+        handle_connected();
+      }
+      else
+      {
+        socket_wait_thread().await(m_connectedsocket, POLLOUT, [=]() { handle_created(); }, 2000);
+      }
+    }
   }
 
+
+  //|///////////////////// ClientSocket::handle_connected ///////////////////
+  void ClientSocket::handle_connected()
+  {
+    read_stream();
+
+    if (m_status == SocketStatus::Connected)
+    {
+      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
+    }
+
+    if (m_status == SocketStatus::Cactus)
+    {
+      close_and_invalidate();
+
+      m_connect.reset();
+
+      m_activity.release();
+    }
+  }
 
 
 
@@ -1107,6 +1354,8 @@ namespace leap { namespace socklib
   {
     m_port = 0;
     m_listeningsocket = INVALID_SOCKET;
+    m_errorcondition = 0;
+    m_destroysignal = false;
   }
 
 
@@ -1135,58 +1384,20 @@ namespace leap { namespace socklib
   {
     assert(m_listeningsocket == INVALID_SOCKET);
 
-    m_port = port;
-
     //
     // Initialise the SockAddr Structure
     //
 
-    memset(&m_sockaddr, 0, sizeof(m_sockaddr));
+    m_port = port;
 
-    m_sockaddr.sin_family = AF_INET;
-    m_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_sockaddr.sin_port = htons((u_short)m_port);
-
-    //
-    // Create a socket that listens for connections
-    //
-
-    m_listeningsocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (m_listeningsocket == INVALID_SOCKET)
+    if (!create_and_bind())
     {
-      throw socketpump_error("Error Creating Listening Socket (" + toa(GetLastError()) + ")");
+      throw socketpump_error("Error Binding Socket Pump (" + toa(m_errorcondition) + ")");
     }
 
-    int one = 1;
-    setsockopt(m_listeningsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
+    handle_connected();
 
-    //
-    // Bind the listening socket to the port number
-    //
-
-    if (::bind(m_listeningsocket, (sockaddr*)&(m_sockaddr), sizeof(m_sockaddr)) != 0)
-    {
-      destroy();
-
-      throw socketpump_error("Error Binding Listening Socket (" + toa(GetLastError()) + ")");
-    }
-
-    // Set socket to non-blocking mode
-  #ifdef _WIN32
-    u_long nonblocking = true;
-    ioctlsocket(m_listeningsocket, FIONBIO, &nonblocking);
-  #else
-    fcntl(m_listeningsocket, F_SETFL, fcntl(m_listeningsocket, F_GETFL) | O_NONBLOCK);
-  #endif
-
-    if (listen(m_listeningsocket, SOMAXCONN) == SOCKET_ERROR)
-    {
-      destroy();
-
-      throw socketpump_error("Error Listening on Socket (" + toa(GetLastError()) + ")");
-    }
-
-    m_threadcontrol.create_thread(this, &SocketPump::SocketPumpThread);
+    socket_wait_thread().signal(m_listeningsocket);
 
     return true;
   }
@@ -1198,13 +1409,81 @@ namespace leap { namespace socklib
   ///
   void SocketPump::destroy()
   {
-    m_threadcontrol.join_threads();
+    m_destroysignal = true;
 
+    while (m_listeningsocket != INVALID_SOCKET)
+    {
+      socket_wait_thread().signal(m_listeningsocket);
+
+      sleep_for(32);
+    }
+
+    m_destroysignal = false;
+  }
+
+
+  //|///////////////////// SocketPump::create_and_bind //////////////////////
+  bool SocketPump::create_and_bind()
+  {
+    sockaddr_t addr = {};
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons((u_short)m_port);
+
+    //
+    // Create a socket that listens for connections
+    //
+
+    m_listeningsocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    if (m_listeningsocket == INVALID_SOCKET)
+    {
+      m_errorcondition = GetLastError();
+
+      return false;
+    }
+
+    setnonblocking(m_listeningsocket);
+
+    int one = 1;
+    setsockopt(m_listeningsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
+
+    //
+    // Bind the listening socket to the port number
+    //
+
+    if (bind(m_listeningsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
+    {
+      m_errorcondition = GetLastError();
+
+      close_listener();
+
+      return false;
+    }
+
+    if (listen(m_listeningsocket, SOMAXCONN) == SOCKET_ERROR)
+    {
+      m_errorcondition = GetLastError();
+
+      close_listener();
+
+      return false;
+    }
+
+    return true;
+  }
+
+
+  //|///////////////////// SocketPump::close_listener ///////////////////////
+  void SocketPump::close_listener()
+  {
     if (m_listeningsocket != INVALID_SOCKET)
       closesocket(m_listeningsocket);
 
     m_listeningsocket = INVALID_SOCKET;
   }
+
 
 
   //|///////////////////// SocketPump::wait_for_connection //////////////////
@@ -1242,23 +1521,19 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// ClientSocket::SocketPumpThread ///////////////////
-  //
-  // Socket Pump Thread
-  //
-  long SocketPump::SocketPumpThread()
+  //|///////////////////// SocketPump::handle_connected /////////////////////
+  void SocketPump::handle_connected()
   {
-    while (!m_threadcontrol.terminating())
+    if (m_destroysignal)
     {
-      if (select(500, m_listeningsocket, -1))
-      {
-        m_activity.release();
+      close_listener();
 
-        sleep_for(250);
-      }
+      return;
     }
 
-    return 0;
+    m_activity.release();
+
+    socket_wait_thread().await(m_listeningsocket, POLLIN, [=]() { handle_connected(); });
   }
 
 
@@ -1271,15 +1546,17 @@ namespace leap { namespace socklib
   //|///////////////////// BroadcastSocket::Constructor /////////////////////
   BroadcastSocket::BroadcastSocket()
   {
+    m_port = 0;
     m_options = 0;
     m_bufferhead = 0;
     m_buffertail = 0;
     m_buffercount = 0;
+    m_destroysignal = false;
   }
 
 
   //|///////////////////// BroadcastSocket::Constructor /////////////////////
-  BroadcastSocket::BroadcastSocket(int port, const char *options)
+  BroadcastSocket::BroadcastSocket(unsigned int port, const char *options)
     : BroadcastSocket()
   {
     create(port, options);
@@ -1287,7 +1564,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// BroadcastSocket::Constructor /////////////////////
-  BroadcastSocket::BroadcastSocket(unsigned int ip, int port, const char *options)
+  BroadcastSocket::BroadcastSocket(unsigned int ip, unsigned int port, const char *options)
     : BroadcastSocket()
   {
     create(ip, port, options);
@@ -1319,7 +1596,7 @@ namespace leap { namespace socklib
   /// \param[in] port The port number on which to create the socket
   /// \param[in] options Options string
   //|
-  bool BroadcastSocket::create(int port, const char *options)
+  bool BroadcastSocket::create(unsigned int port, const char *options)
   {
     return create(htonl(INADDR_ANY), port, options);
   }
@@ -1333,7 +1610,7 @@ namespace leap { namespace socklib
   /// \param[in] port The port number on which to create the socket
   /// \param[in] options Options string
   //|
-  bool BroadcastSocket::create(unsigned int ip, int port, const char *options)
+  bool BroadcastSocket::create(unsigned int address, unsigned int port, const char *options)
   {
     assert(m_status == SocketStatus::Unborn || m_status == SocketStatus::Dead);
 
@@ -1347,13 +1624,25 @@ namespace leap { namespace socklib
     // Initialise and Create
     //
 
-    memset(&m_sockaddr, 0, sizeof(m_sockaddr));
+    m_port = port;
+    m_address = address;
 
-    m_sockaddr.sin_family = AF_INET;
-    m_sockaddr.sin_addr.s_addr = ip;
-    m_sockaddr.sin_port = htons((u_short)port);
+    if (!create_and_bind())
+    {
+      m_status = SocketStatus::Dead;
 
-    m_threadcontrol.create_thread(this, &BroadcastSocket::BroadcastSocketThread);
+      throw socket_error("Error Binding Broadcast Socket (" + toa(m_errorcondition) + ")");
+    }
+
+    m_bufferhead = 0;
+    m_buffertail = 0;
+    m_buffercount = 0;
+    m_errorcondition = 0;
+    m_status = SocketStatus::Created;
+
+    handle_created();
+
+    socket_wait_thread().signal(m_connectedsocket);
 
     return true;
   }
@@ -1362,30 +1651,18 @@ namespace leap { namespace socklib
   //|///////////////////// BroadcastSocket::destroy /////////////////////////
   void BroadcastSocket::destroy()
   {
-    m_threadcontrol.join_threads();
+    m_destroysignal = true;
+
+    while (m_status != SocketStatus::Unborn && m_status != SocketStatus::Dead)
+    {
+      socket_wait_thread().signal(m_connectedsocket);
+
+      sleep_for(32);
+    }
+
+    m_destroysignal = false;
 
     SocketBase::destroy();
-  }
-
-
-  //|///////////////////// BroadcastSocket::wait_on_connect /////////////////
-  ///
-  /// Waits for connection
-  ///
-  /// \param[in] timeout Length of time to wait until connection
-  ///
-  /// \return true if successful wait, false if timeout
-  ///
-  bool BroadcastSocket::wait_on_connect(int timeout)
-  {
-    while (true)
-    {
-      if (connected())
-        return true;
-
-      if (!m_activity.wait(timeout))
-        return false;
-    }
   }
 
 
@@ -1395,7 +1672,7 @@ namespace leap { namespace socklib
   ///
   bool BroadcastSocket::packet_available()
   {
-    return (connected() && m_buffercount > 0);
+    return (m_buffercount > 0);
   }
 
 
@@ -1415,10 +1692,6 @@ namespace leap { namespace socklib
       if (m_buffercount > 0)
         return true;
 
-      // If the socket has been disconnected, exit via timeout
-      if (!connected())
-        return false;
-
       // Wait for some more activity
       if (!m_activity.wait(timeout))
         return false;
@@ -1432,9 +1705,11 @@ namespace leap { namespace socklib
   //
   void BroadcastSocket::broadcast(const void *buffer, size_t bytes, unsigned int ip, int port)
   {
-    sockaddr_in dest;
+    // Ensure we are created
+    if (m_status == SocketStatus::Unborn)
+      throw socket_error("Socket Not Created");
 
-    memset(&dest, 0, sizeof(dest));
+    sockaddr_in dest = {};
 
     dest.sin_family = AF_INET;
     dest.sin_addr.s_addr = ip;
@@ -1465,10 +1740,6 @@ namespace leap { namespace socklib
     if (m_status == SocketStatus::Unborn)
       throw socket_error("Socket Not Created");
 
-    // Ensure we are connected
-    if (!connected())
-      throw socket_error("Socket Not Connected");
-
     size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
 
     // receive packet
@@ -1492,98 +1763,29 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// BroadcastSocket::connected_loop //////////////////
-  //
-  // Loop until socket is disconnected. For use by ConnectionThreads
-  //
-  void BroadcastSocket::connected_loop(Waitable &cancel)
-  {
-    // Assume we're now connected...
-    m_bufferhead = 0;
-    m_buffertail = 0;
-    m_buffercount = 0;
-    m_errorcondition = 0;
-    m_status = SocketStatus::Connected;
-
-    m_activity.release();
-
-    sockaddr_in addr;
-
-    uint8_t buffer[4096];
-
-    //
-    // While thread is running
-    //
-
-    while (!cancel)
-    {
-      if (!select(500, m_connectedsocket, -1))
-        continue;
-
-      size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
-
-      socklen_t addrlen = sizeof(addr);
-
-      ssize_t bytes = recvfrom(m_connectedsocket, (char*)buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrlen);
-
-      // an error occured...
-      if (bytes == SOCKET_ERROR)
-      {
-        auto result = GetLastError();
-
-        // was it a fatal error that results in a disconnect ?
-        if (result != EWOULDBLOCK && result != ECONNRESET)
-        {
-          m_errorcondition = result;
-          break;
-        }
-      }
-
-      else
-      {
-        //
-        // Got some data.. move to the read buffer
-        //
-
-        size_t bufbytes = m_buffer.size() - buffercount;
-
-        if (bytes + sizeof(packet_t) < bufbytes)
-        {
-          size_t size = bytes;
-
-          ring_push(&m_buffer, &m_buffertail, &addr, sizeof(addr));
-          ring_push(&m_buffer, &m_buffertail, &size, sizeof(size));
-          ring_push(&m_buffer, &m_buffertail, buffer, size);
-
-          // update count (compare-and-swap)
-          while (!m_buffercount.compare_exchange_weak(buffercount, buffercount + bytes + sizeof(packet_t)))
-            ;
-        }
-
-        m_activity.release();
-      }
-    }
-
-    // Disconnect now...
-    m_status = SocketStatus::Cactus;
-
-    m_activity.release();
-  }
-
-
   //|///////////////////// BroadcastSocket::create_and_bind /////////////////
   bool BroadcastSocket::create_and_bind()
   {
+    sockaddr_t addr = {};
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = m_address;
+    addr.sin_port = htons((u_short)m_port);
+
     //
     // Create a socket that listens for connections
     //
 
-    m_connectedsocket = ::socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    m_connectedsocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
     if (m_connectedsocket == INVALID_SOCKET)
     {
       m_errorcondition = GetLastError();
+
       return false;
     }
+
+    setnonblocking(m_connectedsocket);
 
     int one = 1;
     setsockopt(m_connectedsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
@@ -1593,49 +1795,91 @@ namespace leap { namespace socklib
     // Bind the socket to the port number
     //
 
-    if (::bind(m_connectedsocket, (sockaddr*)&(m_sockaddr), sizeof(m_sockaddr)) != 0)
+    if (bind(m_connectedsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
     {
       m_errorcondition = GetLastError();
+
+      close_and_invalidate();
+
       return false;
     }
-
-    // Set socket to non-blocking mode
-  #ifdef _WIN32
-    u_long nonblocking = true;
-    ioctlsocket(m_connectedsocket, FIONBIO, &nonblocking);
-  #else
-    fcntl(m_connectedsocket, F_SETFL, fcntl(m_connectedsocket, F_GETFL) | O_NONBLOCK);
-  #endif
 
     return true;
   }
 
 
-  //|///////////////////// BroadcastSocket::BroadcastSocketThread ///////////
-  //
-  // Broadcast Sink Thread...
-  //
-  long BroadcastSocket::BroadcastSocketThread()
+  //|///////////////////// BroadcastSocket::close_and_invalidate ////////////
+  void BroadcastSocket::close_and_invalidate()
   {
-    if (!create_and_bind())
+    if (m_connectedsocket != INVALID_SOCKET)
+      closesocket(m_connectedsocket);
+
+    m_connectedsocket = INVALID_SOCKET;
+  }
+
+
+  //|///////////////////// BroadcastSocket::handle_connected ////////////////
+  void BroadcastSocket::handle_created()
+  {
+    if (m_destroysignal)
     {
       m_status = SocketStatus::Dead;
 
-      return 0;
+      return;
     }
 
-    //
-    // OK, the socket is now Created
-    //
+    sockaddr_in addr;
 
-    m_status = SocketStatus::Created;
+    uint8_t buffer[4096];
 
-    connected_loop(m_threadcontrol.terminate());
+    size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
 
-    m_status = SocketStatus::Dead;
+    socklen_t addrlen = sizeof(addr);
 
-    return 0;
+    ssize_t bytes = recvfrom(m_connectedsocket, (char*)buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrlen);
+
+    // an error occured...
+    if (bytes == SOCKET_ERROR)
+    {
+      auto result = GetLastError();
+
+      // was it a fatal error that results in a disconnect ?
+      if (result != EWOULDBLOCK && result != ECONNRESET)
+      {
+        m_errorcondition = result;
+        m_status = SocketStatus::Cactus;
+
+        m_activity.release();
+      }
+    }
+
+    else
+    {
+      //
+      // Got some data.. move to the read buffer
+      //
+
+      size_t bufbytes = m_buffer.size() - buffercount;
+
+      if (bytes + sizeof(packet_t) < bufbytes)
+      {
+        size_t size = bytes;
+
+        ring_push(&m_buffer, &m_buffertail, &addr, sizeof(addr));
+        ring_push(&m_buffer, &m_buffertail, &size, sizeof(size));
+        ring_push(&m_buffer, &m_buffertail, buffer, size);
+
+        // update count (compare-and-swap)
+        while (!m_buffercount.compare_exchange_weak(buffercount, buffercount + bytes + sizeof(packet_t)))
+          ;
+      }
+
+      m_activity.release();
+    }
+
+    socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_created(); });
   }
+
 
 
   //|--------------------- Functions ----------------------------------------
@@ -1674,13 +1918,14 @@ namespace leap { namespace socklib
     char buffer[1024];
 
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+
     if (sock == INVALID_SOCKET)
       return result;
 
-  #ifdef _WIN32
+#ifdef _WIN32
     DWORD bytes = 0;
     INTERFACE_INFO *ifc = (INTERFACE_INFO*)buffer;
-    WSAIoctl(sock, SIO_GET_INTERFACE_LIST, NULL, 0, buffer, sizeof(buffer), &bytes, NULL, NULL);
+    WSAIoctl(sock, SIO_GET_INTERFACE_LIST, 0, 0, buffer, sizeof(buffer), &bytes, 0, 0);
 
     for(INTERFACE_INFO *ifr = ifc; ifr < ifc + bytes / sizeof(INTERFACE_INFO); ++ifr)
     {
@@ -1693,7 +1938,7 @@ namespace leap { namespace socklib
 
       result.push_back(iface);
     }
-  #else
+#else
     ifconf ifc;
     ifc.ifc_buf = buffer;
     ifc.ifc_len = sizeof(buffer);
@@ -1714,7 +1959,7 @@ namespace leap { namespace socklib
 
       result.push_back(iface);
     }
-  #endif
+#endif
 
     closesocket(sock);
 

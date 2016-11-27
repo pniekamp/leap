@@ -126,6 +126,8 @@ void HTTPTest()
 {
   cout << "HTTP Test\n\n";
 
+  InitialiseSocketSubsystem();
+
   TestRequest();
 
   TestWebSocket();

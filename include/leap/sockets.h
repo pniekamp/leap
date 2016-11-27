@@ -214,7 +214,8 @@ namespace leap { namespace socklib
       StreamSocket();
       ~StreamSocket() = default;
 
-      void connected_loop(threadlib::Waitable &cancel);
+      void init_stream();
+      void read_stream();
 
       void destroy();
 
@@ -224,6 +225,8 @@ namespace leap { namespace socklib
       size_t m_buffertail;
       std::atomic<size_t> m_buffercount;
       std::array<uint8_t, kSocketBufferSize> m_buffer;
+
+      std::atomic<bool> m_closesignal;
   };
 
 
@@ -257,20 +260,20 @@ namespace leap { namespace socklib
 
       void parse_options(const char *options);
       bool create_and_bind();
-      bool listen_and_accept();
       void close_and_invalidate();
       void close_listener();
+      void handle_created();
+      void handle_connected();
 
-      sockaddr_t m_sockaddr;
+      unsigned int m_port;
+
       SOCKET m_listeningsocket;
 
       enum { Connectable = 0x01, KeepAlive = 0x04 };
 
       long m_options;
 
-      threadlib::ThreadControl m_threadcontrol;
-
-      long ServerSocketThread();
+      std::atomic<bool> m_destroysignal;
   };
 
 
@@ -295,20 +298,23 @@ namespace leap { namespace socklib
 
       bool create(const char *ipaddress, unsigned int port, const char *options = "");
 
+      void destroy();
+
       bool wait_on_connect(int timeout = -1);
 
       bool connect();
-
-      void destroy();
 
     private:
 
       void parse_options(const char *options);
       bool create_socket();
       bool connect_socket();
-      void close_socket();
+      void close_and_invalidate();
+      void handle_created();
+      void handle_connected();
 
-      sockaddr_t m_sockaddr;
+      unsigned int m_port;
+      std::string m_address;
 
       enum { keepalive = 0x04 };
 
@@ -316,9 +322,7 @@ namespace leap { namespace socklib
 
       threadlib::Event m_connect;
 
-      threadlib::ThreadControl m_threadcontrol;
-
-      long ClientSocketThread();
+      std::atomic<bool> m_destroysignal;
   };
 
 
@@ -351,6 +355,10 @@ namespace leap { namespace socklib
       explicit SocketPump(unsigned int port);
       ~SocketPump();
 
+      unsigned int port() const { return m_port; }
+
+    public:
+
       bool create(unsigned int port);
 
       void destroy();
@@ -365,16 +373,19 @@ namespace leap { namespace socklib
 
     private:
 
+      bool create_and_bind();
+      void close_listener();
+      void handle_connected();
+
       unsigned int m_port;
 
-      sockaddr_t m_sockaddr;
       SOCKET m_listeningsocket;
+
+      unsigned int m_errorcondition;
 
       threadlib::Semaphore m_activity;
 
-      threadlib::ThreadControl m_threadcontrol;
-
-      long SocketPumpThread();
+      std::atomic<bool> m_destroysignal;
   };
 
 
@@ -398,13 +409,19 @@ namespace leap { namespace socklib
 
     public:
       BroadcastSocket();
-      explicit BroadcastSocket(int port, const char *options = "");
-      explicit BroadcastSocket(unsigned int ip, int port, const char *options = "");
+      explicit BroadcastSocket(unsigned int port, const char *options = "");
+      explicit BroadcastSocket(unsigned int address, unsigned int port, const char *options = "");
       ~BroadcastSocket();
 
-      int port() const { return ntohs(m_sockaddr.sin_port); }
+      unsigned int port() const { return m_port; }
+      unsigned int address() const { return m_address; }
 
-      bool wait_on_connect(int timeout = -1);
+    public:
+
+      bool create(unsigned int port, const char *options = "");
+      bool create(unsigned int address, unsigned int port, const char *options = "");
+
+      void destroy();
 
       bool packet_available();
 
@@ -413,19 +430,6 @@ namespace leap { namespace socklib
       void broadcast(const void *buffer, size_t bytes, unsigned int ip, int port);
 
       size_t receive(void *buffer, size_t n, sockaddr_t *addr = NULL);
-
-    public:
-
-      bool create(int port, const char *options = "");
-      bool create(unsigned int ip, int port, const char *options = "");
-
-      void destroy();
-
-    protected:
-
-      bool create_and_bind();
-
-      void connected_loop(threadlib::Waitable &cancel);
 
     private:
 
@@ -446,14 +450,16 @@ namespace leap { namespace socklib
     private:
 
       void parse_options(const char *options);
+      bool create_and_bind();
+      void close_and_invalidate();
+      void handle_created();
 
-      sockaddr_t m_sockaddr;
+      unsigned int m_port;
+      unsigned int m_address;
 
       long m_options;
 
-      threadlib::ThreadControl m_threadcontrol;
-
-      long BroadcastSocketThread();
+      std::atomic<bool> m_destroysignal;
   };
 
 

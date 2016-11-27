@@ -112,28 +112,6 @@ static void BroadcastSocketTest()
   BroadcastSocket server(1200);
   BroadcastSocket client(1208);
 
-  string lastserver;
-  string lastclient;
-
-  do
-  {
-    string serverstatus = server.statustxt();
-    string clientstatus = client.statustxt();
-
-    if (serverstatus != lastserver || clientstatus != lastclient)
-      cout << "  " << tm.elapsed() << "\t" << server.statustxt() << "\t" << client.statustxt() << "\n";
-
-    lastserver = serverstatus;
-    lastclient = clientstatus;
-
-    if (client.connected() && server.connected())
-    {
-      cout << "  " << tm.elapsed() << "\t" << "Connected\tConnected\n";
-      break;
-    }
-
-  } while (server.status() != SocketBase::SocketStatus::Dead && client.status() != SocketBase::SocketStatus::Dead);
-
   for(int i = 0; i < 100; ++i)
     server.broadcast("HelloWorld", 11, inet_addr("127.0.0.1"), 1208);
 

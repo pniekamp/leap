@@ -780,24 +780,10 @@ namespace leap { namespace socklib
 
   HTTPClient::ConnectionPool &global_connection_pool()
   {
-  #if defined __MINGW32__
-    static thread_local int onceflag = 0;
-    static CriticalSection oncemutex;
-    static std::unique_ptr<HTTPClient::ConnectionPool> instance;
-
-    if (onceflag == 0)
-    {
-      SyncLock M(oncemutex);
-      if (!instance.get())
-        instance.reset(new HTTPClient::ConnectionPool);
-      onceflag = 1;
-    }
-  #else
     static std::once_flag onceflag;
     static std::unique_ptr<HTTPClient::ConnectionPool> instance;
 
     call_once(onceflag, [] { instance.reset(new HTTPClient::ConnectionPool); });
-  #endif
 
     return *instance.get();
   }

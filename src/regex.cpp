@@ -762,7 +762,7 @@ namespace leap { namespace regex
 
       void visit(RegExImpl::RegExState &state)
       {
-        if (state.capture == true|| state.count != 0)
+        if (state.capture == true && state.count != 0)
         {
           m_groups->push_back(string(state.first, state.last+1));
         }
