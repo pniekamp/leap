@@ -1490,44 +1490,51 @@ namespace leap { namespace socklib
 
       while (m_workerqueue.pop(&connection))
       {
-        try
+        if (connection->socket.connected())
         {
-          if (connection->type == Connection::SocketType::Http)
+          try
           {
-            HTTPRequest request;
-
-            if (read_http_request(connection->socket, &request))
+            if (connection->type == Connection::SocketType::Http)
             {
-              if (request.header("Upgrade") == "websocket")
+              HTTPRequest request;
+
+              if (read_http_request(connection->socket, &request))
               {
-                sigUpgrade(connection, request);
+                if (request.header("Upgrade") == "websocket")
+                {
+                  sigUpgrade(connection, request);
 
-                connection->type = Connection::SocketType::WebSocket;
+                  connection->type = Connection::SocketType::WebSocket;
 
-                connection->endpoint = request.location();
+                  connection->endpoint = request.location();
+                }
+                else
+                {
+                  sigRespond(connection, request);
+                }
               }
-              else
+            }
+
+            if (connection->type == Connection::SocketType::WebSocket)
+            {
+              WebSocketMessage message;
+
+              message.set_endpoint(connection->endpoint);
+
+              if (read_websocket_message(connection->socket, &message))
               {
-                sigRespond(connection, request);
+                sigReceive(connection, message);
               }
             }
           }
-
-          if (connection->type == Connection::SocketType::WebSocket)
+          catch(SocketBase::socket_error &)
           {
-            WebSocketMessage message;
-
-            message.set_endpoint(connection->endpoint);
-
-            if (read_websocket_message(connection->socket, &message))
-            {
-              sigReceive(connection, message);
-            }
+            connection->socket.close();
           }
 
           m_selectqueue.push(connection);
         }
-        catch(SocketBase::socket_error &)
+        else
         {
           sigDisconnect(connection);
 
