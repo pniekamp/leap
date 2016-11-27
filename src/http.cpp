@@ -391,9 +391,6 @@ namespace
   //|///////////////////// read_websocket_message ///////////////////////////
   bool read_websocket_message(StreamSocket &socket, WebSocketMessage *msg, int timeout = 20000)
   {
-    if (!socket.connected())
-      throw SocketBase::socket_error("Not Connected");
-
     msg->clear();
 
     size_t s = 0;

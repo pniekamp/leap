@@ -614,10 +614,6 @@ namespace leap { namespace socklib
     if (m_status == SocketStatus::Unborn)
       throw socket_error("Socket Not Created");
 
-    // Ensure we are connected
-    if (!connected())
-      throw socket_error("Socket Not Connected");
-
     size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
 
     size_t bytes = min(n, buffercount);
@@ -1888,9 +1884,6 @@ namespace leap { namespace socklib
   //////////////////////// readline /////////////////////////////////////////
   bool readline(StreamSocket &socket, char *buffer, int n, int timeout)
   {
-    if (!socket.connected())
-      throw SocketBase::socket_error("Not Connected");
-
     for(int i = 1; socket.wait_on_bytes(i, timeout) && i < n; ++i)
     {
       if (socket.peek(i-1) == '\n')
