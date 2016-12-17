@@ -120,10 +120,14 @@ void RTreeTest1()
 //|//////////////////// RTreeTest2 //////////////////////////////////////////
 void RTreeTest2()
 {
+  vector<Object> objects;
+  for(int i = 0; i < 100; ++i)
+    objects.push_back(Object(rand() % 50, rand() % 50));
+
   RTree2d<Object*> tree;
 
-  for(int i = 0; i < 100; ++i)
-    tree.insert(new Object(rand() % 50, rand() % 50));
+  for(auto &object : objects)
+    tree.insert(&object);
 
   DumpTest(tree);
 

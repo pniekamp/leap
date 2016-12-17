@@ -273,7 +273,7 @@ namespace leap { namespace socklib
 
       long m_options;
 
-      std::atomic<bool> m_destroysignal;
+      std::atomic<int> m_destroysignal;
   };
 
 
@@ -322,7 +322,7 @@ namespace leap { namespace socklib
 
       threadlib::Event m_connect;
 
-      std::atomic<bool> m_destroysignal;
+      std::atomic<int> m_destroysignal;
   };
 
 
@@ -385,7 +385,7 @@ namespace leap { namespace socklib
 
       threadlib::Semaphore m_activity;
 
-      std::atomic<bool> m_destroysignal;
+      std::atomic<int> m_destroysignal;
   };
 
 
@@ -459,7 +459,7 @@ namespace leap { namespace socklib
 
       long m_options;
 
-      std::atomic<bool> m_destroysignal;
+      std::atomic<int> m_destroysignal;
   };
 
 

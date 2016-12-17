@@ -772,7 +772,7 @@ namespace leap { namespace socklib
     m_port = 0;
     m_options = 0;
     m_listeningsocket = INVALID_SOCKET;
-    m_destroysignal = false;
+    m_destroysignal = -1;
   }
 
 
@@ -851,6 +851,8 @@ namespace leap { namespace socklib
 
     m_status = SocketStatus::Created;
 
+    m_destroysignal += 1;
+
     handle_created();
 
     socket_wait_thread().signal(m_listeningsocket);
@@ -868,6 +870,7 @@ namespace leap { namespace socklib
   ///
   bool ServerSocket::attach(socket_t socket, const char *options)
   {
+    assert(socket.sid != INVALID_SOCKET);
     assert(m_listeningsocket == INVALID_SOCKET);
     assert(m_status == SocketStatus::Unborn || m_status == SocketStatus::Dead);
 
@@ -887,6 +890,8 @@ namespace leap { namespace socklib
 
     m_status = SocketStatus::Created;
 
+    m_destroysignal += 1;
+
     handle_created();
 
     socket_wait_thread().signal(m_connectedsocket);
@@ -898,19 +903,19 @@ namespace leap { namespace socklib
   //|///////////////////// ServerSocket::destroy ////////////////////////////
   void ServerSocket::destroy()
   {
-    m_destroysignal = true;
+    m_destroysignal += 1;
 
-    while (m_status != SocketStatus::Unborn && m_status != SocketStatus::Dead)
+    while (m_destroysignal != 0)
     {
       close();
       socket_wait_thread().signal(m_listeningsocket);
 
-      sleep_for(32);
+      sleep_yield();
     }
 
-    m_destroysignal = false;
-
     close_listener();
+
+    m_destroysignal -= 1;
 
     StreamSocket::destroy();
   }
@@ -995,7 +1000,7 @@ namespace leap { namespace socklib
   {
     if (m_destroysignal)
     {
-      m_status = SocketStatus::Dead;
+      m_destroysignal -= 1;
 
       return;
     }
@@ -1032,12 +1037,7 @@ namespace leap { namespace socklib
   {
     read_stream();
 
-    if (m_status == SocketStatus::Connected)
-    {
-      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
-    }
-
-    if (m_status == SocketStatus::Cactus)
+    if (m_status != SocketStatus::Connected)
     {
       close_and_invalidate();
 
@@ -1047,8 +1047,12 @@ namespace leap { namespace socklib
       }
       else
       {
-        m_status = SocketStatus::Dead;
+        m_destroysignal -= 1;
       }
+    }
+    else
+    {
+      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
     }
   }
 
@@ -1063,7 +1067,7 @@ namespace leap { namespace socklib
   {
     m_port = 0;
     m_options = 0;
-    m_destroysignal = false;
+    m_destroysignal = -1;
   }
 
 
@@ -1163,6 +1167,8 @@ namespace leap { namespace socklib
     {
       m_connect.set();
 
+      m_destroysignal += 1;
+
       handle_created();
 
       socket_wait_thread().signal(m_connectedsocket);
@@ -1175,24 +1181,18 @@ namespace leap { namespace socklib
   //|///////////////////// ClientSocket::destroy ////////////////////////////
   void ClientSocket::destroy()
   {
-    m_destroysignal = true;
+    m_destroysignal += 1;
 
-    while (m_connect)
+    while (m_destroysignal != 0)
     {
       close();
 
-      sleep_for(32);
+      sleep_yield();
     }
 
-    while (m_status != SocketStatus::Unborn && m_status != SocketStatus::Dead)
-    {
-      socket_wait_thread().await(m_connectedsocket, 0, [=]() { handle_created(); });
-      socket_wait_thread().signal(m_connectedsocket);
+    m_connect.reset();
 
-      sleep_for(32);
-    }
-
-    m_destroysignal = false;
+    m_destroysignal -= 1;
 
     StreamSocket::destroy();
   }
@@ -1285,9 +1285,7 @@ namespace leap { namespace socklib
   {
     if (m_destroysignal)
     {
-      m_status = SocketStatus::Dead;
-
-      m_connect.reset();
+      m_destroysignal -= 1;
 
       return;
     }
@@ -1299,6 +1297,8 @@ namespace leap { namespace socklib
         if (!create_socket())
         {
           m_status = SocketStatus::Dead;
+
+          m_destroysignal -= 1;
 
           return;
         }
@@ -1323,18 +1323,21 @@ namespace leap { namespace socklib
   {
     read_stream();
 
-    if (m_status == SocketStatus::Connected)
-    {
-      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
-    }
-
-    if (m_status == SocketStatus::Cactus)
+    if (m_status != SocketStatus::Connected)
     {
       close_and_invalidate();
 
       m_connect.reset();
 
       m_activity.release();
+
+      m_destroysignal -= 1;
+
+      return;
+    }
+    else
+    {
+      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
     }
   }
 
@@ -1351,7 +1354,7 @@ namespace leap { namespace socklib
     m_port = 0;
     m_listeningsocket = INVALID_SOCKET;
     m_errorcondition = 0;
-    m_destroysignal = false;
+    m_destroysignal = -1;
   }
 
 
@@ -1391,6 +1394,8 @@ namespace leap { namespace socklib
       throw socketpump_error("Error Binding Socket Pump (" + toa(m_errorcondition) + ")");
     }
 
+    m_destroysignal += 1;
+
     handle_connected();
 
     socket_wait_thread().signal(m_listeningsocket);
@@ -1405,16 +1410,18 @@ namespace leap { namespace socklib
   ///
   void SocketPump::destroy()
   {
-    m_destroysignal = true;
+    m_destroysignal += 1;
 
-    while (m_listeningsocket != INVALID_SOCKET)
+    while (m_destroysignal != 0)
     {
       socket_wait_thread().signal(m_listeningsocket);
 
-      sleep_for(32);
+      sleep_yield();
     }
 
-    m_destroysignal = false;
+    close_listener();
+
+    m_destroysignal -= 1;
   }
 
 
@@ -1481,7 +1488,6 @@ namespace leap { namespace socklib
   }
 
 
-
   //|///////////////////// SocketPump::wait_for_connection //////////////////
   bool SocketPump::wait_for_connection(int timeout)
   {
@@ -1522,7 +1528,7 @@ namespace leap { namespace socklib
   {
     if (m_destroysignal)
     {
-      close_listener();
+      m_destroysignal -= 1;
 
       return;
     }
@@ -1547,7 +1553,7 @@ namespace leap { namespace socklib
     m_bufferhead = 0;
     m_buffertail = 0;
     m_buffercount = 0;
-    m_destroysignal = false;
+    m_destroysignal = -1;
   }
 
 
@@ -1636,6 +1642,8 @@ namespace leap { namespace socklib
     m_errorcondition = 0;
     m_status = SocketStatus::Created;
 
+    m_destroysignal += 1;
+
     handle_created();
 
     socket_wait_thread().signal(m_connectedsocket);
@@ -1647,16 +1655,16 @@ namespace leap { namespace socklib
   //|///////////////////// BroadcastSocket::destroy /////////////////////////
   void BroadcastSocket::destroy()
   {
-    m_destroysignal = true;
+    m_destroysignal += 1;
 
-    while (m_status != SocketStatus::Unborn && m_status != SocketStatus::Dead)
+    while (m_destroysignal != 0)
     {
       socket_wait_thread().signal(m_connectedsocket);
 
-      sleep_for(32);
+      sleep_yield();
     }
 
-    m_destroysignal = false;
+    m_destroysignal -= 1;
 
     SocketBase::destroy();
   }
@@ -1814,12 +1822,12 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// BroadcastSocket::handle_connected ////////////////
+  //|///////////////////// BroadcastSocket::handle_created //////////////////
   void BroadcastSocket::handle_created()
   {
     if (m_destroysignal)
     {
-      m_status = SocketStatus::Dead;
+      m_destroysignal -= 1;
 
       return;
     }
