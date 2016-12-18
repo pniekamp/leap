@@ -58,7 +58,7 @@ void DumpTest(Tree const &tree)
   {
     ++nodes;
 
-    for(auto j = i->begin(); j != i->end(); ++j)
+    for(auto j = i.items().begin(); j != i.items().end(); ++j)
       ++items;
 
     i.descend();
@@ -103,6 +103,8 @@ void RTreeTest1()
 
   cout << ": " << items << " items\n";
 
+  distance(bounded_iterator(tree.begin(), make_bound(Vector2(0.0, 0.0), 15.0)), bounded_iterator(tree.end(), {}));
+
   auto nearest = nearest_neighbour(tree, Vector2(10.0, 10.0));
 
   cout << "  Nearest: " << "(" << nearest->m_x << "," << nearest->m_y << ")\n";
@@ -124,7 +126,7 @@ void RTreeTest2()
   for(int i = 0; i < 100; ++i)
     objects.push_back(Object(rand() % 50, rand() % 50));
 
-  RTree2d<Object*> tree;
+  RTree2d<Object const *> tree;
 
   for(auto &object : objects)
     tree.insert(&object);
@@ -141,6 +143,8 @@ void RTreeTest2()
   }
 
   cout << ": " << items << " items\n";
+
+  distance(bounded_iterator(tree.begin(), make_bound(Vector2(0.0, 0.0), 15.0)), bounded_iterator(tree.end(), {}));
 
   auto nearest = nearest_neighbour(tree, Vector2(10.0, 10.0));
 
@@ -161,7 +165,7 @@ template<typename Iterator>
 void RecursiveDumpTest(Iterator node, int *nodes, int *items)
 {
   *nodes += 1;
-  *items += node->size();
+  *items += node.items().size();
 
   for(size_t i = 0; i < node.children(); ++i)
   {

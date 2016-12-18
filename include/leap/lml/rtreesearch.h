@@ -43,11 +43,17 @@ namespace leap { namespace lml
     **/
 
     template<typename Iterator>
-    class rtree_bounded_iterator : public std::iterator<std::forward_iterator_tag, typename Iterator::value_type::value_type>
+    class rtree_bounded_iterator
     {
       public:
 
+        typedef typename Iterator::item_type value_type;
         typedef typename Iterator::bound_type bound_type;
+
+        typedef value_type *pointer;
+        typedef value_type &reference;
+        typedef std::ptrdiff_t difference_type;
+        typedef std::forward_iterator_tag iterator_category;
 
       public:
         rtree_bounded_iterator()
@@ -58,7 +64,7 @@ namespace leap { namespace lml
         rtree_bounded_iterator(Iterator first, bound_type const &searchbox)
           : m_item(0), m_iterator(first), m_searchbox(searchbox)
         {
-          if (m_iterator != Iterator() && (m_iterator->size() == 0 || !contains(m_searchbox, dereference(m_iterator->at(m_item)))))
+          if (m_iterator != Iterator() && (m_iterator.items().size() == 0 || !contains(m_searchbox, dereference(m_iterator.items()[m_item]))))
             ++(*this);
         }
 
@@ -68,8 +74,8 @@ namespace leap { namespace lml
         bool operator ==(Iterator const &that) const { return (m_iterator == that && m_item == 0); }
         bool operator !=(Iterator const &that) const { return (m_iterator != that || m_item != 0); }
 
-        auto operator *() const -> decltype((std::declval<Iterator>()->at(0))) { return m_iterator->at(m_item); }
-        auto operator ->() const -> decltype(&(std::declval<Iterator>()->at(0))) { return &m_iterator->at(m_item); }
+        auto &operator *() const { return m_iterator.items()[m_item]; }
+        auto *operator ->() const { return &m_iterator.items()[m_item]; }
 
         rtree_bounded_iterator &operator++()
         {
@@ -77,7 +83,7 @@ namespace leap { namespace lml
 
           while (m_iterator != Iterator())
           {
-            if (m_item >= m_iterator->size())
+            if (m_item >= m_iterator.items().size())
             {
               m_item = 0;
 
@@ -89,7 +95,7 @@ namespace leap { namespace lml
               continue;
             }
 
-            if (contains(m_searchbox, dereference(m_iterator->at(m_item))))
+            if (contains(m_searchbox, dereference(m_iterator.items()[m_item])))
               break;
 
             ++m_item;
@@ -132,7 +138,7 @@ namespace leap { namespace lml
 
       for(auto i = index.begin(); i != index.end(); ++i)
       {
-        for(auto j = i->begin(); j != i->end(); ++j)
+        for(auto j = i.items().begin(); j != i.items().end(); ++j)
         {
           auto dist = distsqr(dereference(*j), pt);
 

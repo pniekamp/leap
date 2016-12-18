@@ -13,6 +13,7 @@
 #include <QPolygonF>
 #include <QTransform>
 #include <QDebug>
+#include <cmath>
 
 namespace shape
 {
