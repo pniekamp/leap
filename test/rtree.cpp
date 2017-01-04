@@ -144,6 +144,7 @@ void RTreeTest2()
 
   cout << ": " << items << " items\n";
 
+  next(tree.begin());
   distance(bounded_iterator(tree.begin(), make_bound(Vector2(0.0, 0.0), 15.0)), bounded_iterator(tree.end(), {}));
 
   auto nearest = nearest_neighbour(tree, Vector2(10.0, 10.0));
