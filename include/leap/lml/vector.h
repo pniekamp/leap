@@ -298,18 +298,18 @@ namespace leap { namespace lml
   template<typename Vector, typename T, size_t... Indices>
   constexpr Vector normalise(VectorView<Vector, T, Indices...> const &v)
   {
-    return scale(v, 1/norm(v));
+    return scale(v, T(1)/norm(v));
   }
 
 
   //|///////////////////// safenormalise ////////////////////////////////////
   /// normalise a vector to a unit vector or return zero
   template<typename Vector, typename T, size_t... Indices>
-  constexpr Vector safenormalise(VectorView<Vector, T, Indices...> const &v)
+  constexpr Vector safenormalise(VectorView<Vector, T, Indices...> const &v, Vector const &nominalvalue = {})
   {
     auto lengthsqr = normsqr(v);
 
-    return fcmp(lengthsqr, T(0)) ? Vector(T(0)) : scale(v, 1/std::sqrt(lengthsqr));
+    return fcmp(lengthsqr, T(0)) ? nominalvalue : scale(v, T(1)/std::sqrt(lengthsqr));
   }
 
 
