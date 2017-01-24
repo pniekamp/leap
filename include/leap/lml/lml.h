@@ -34,6 +34,22 @@ namespace leap { namespace lml
   using leap::lerp;
   using leap::remap;
 
+  template<typename... T, std::enable_if_t<std::is_arithmetic<std::common_type_t<T...>>::value>* = nullptr>
+  auto min(T&&... args)
+  {
+    using std::min;
+
+    return min(args...);
+  }
+
+  template<typename... T, std::enable_if_t<std::is_arithmetic<std::common_type_t<T...>>::value>* = nullptr>
+  auto max(T&&... args)
+  {
+    using std::max;
+
+    return max(args...);
+  }
+
 } }
 
 #endif

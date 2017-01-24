@@ -36,13 +36,11 @@ namespace leap { namespace lml
   //|-------------------- Interpolation -------------------------------------
   //|------------------------------------------------------------------------
 
-
   enum InterpolationType { linear = 1, cosine = 2, cubic = 3 };
-
 
   //|///////////////////// interpolate linear ///////////////////////////////
   template<InterpolationType type, class ForwardIterator, class Iterator, std::enable_if_t<type == linear>* = nullptr>
-  auto interpolate(ForwardIterator xfirst, ForwardIterator xlast, Iterator yfirst, double x)
+  auto interpolate(ForwardIterator xfirst, ForwardIterator xlast, Iterator yfirst, typename std::iterator_traits<ForwardIterator>::value_type x)
   {
     if (xfirst == xlast)
       return typename std::iterator_traits<Iterator>::value_type();
@@ -56,7 +54,7 @@ namespace leap { namespace lml
     auto y1 = yfirst + (x1 - xfirst);
     auto y2 = y1+1;
 
-    double mu = (x-*x1)/(*x2-*x1);
+    auto mu = (x-*x1)/(*x2-*x1);
 
     return (*y1)*(1-mu) + (*y2)*(mu);
   }
@@ -64,7 +62,7 @@ namespace leap { namespace lml
 
   //|///////////////////// interpolate cosine ///////////////////////////////
   template<InterpolationType type, class ForwardIterator, class Iterator, std::enable_if_t<type == cosine>* = nullptr>
-  auto interpolate(ForwardIterator xfirst, ForwardIterator xlast, Iterator yfirst, double x)
+  auto interpolate(ForwardIterator xfirst, ForwardIterator xlast, Iterator yfirst, typename std::iterator_traits<ForwardIterator>::value_type x)
   {
     if (xfirst == xlast)
       return typename std::iterator_traits<Iterator>::value_type();
@@ -78,7 +76,7 @@ namespace leap { namespace lml
     auto y1 = yfirst + (x1 - xfirst);
     auto y2 = y1+1;
 
-    double mu = (1-cos((x-*x1)/(*x2-*x1)*3.14159265))/2;
+    auto mu = (1-cos((x-*x1)/(*x2-*x1)*3.14159265))/2;
 
     return (*y1)*(1-mu) + (*y2)*(mu);
   }
@@ -86,7 +84,7 @@ namespace leap { namespace lml
 
   //|///////////////////// interpolate cubic ////////////////////////////////
   template<InterpolationType type, class ForwardIterator, class Iterator, std::enable_if_t<type == cubic>* = nullptr>
-  auto interpolate(ForwardIterator xfirst, ForwardIterator xlast, Iterator yfirst, double x)
+  auto interpolate(ForwardIterator xfirst, ForwardIterator xlast, Iterator yfirst, typename std::iterator_traits<ForwardIterator>::value_type x)
   {
     if (std::distance(xfirst, xlast) < 3)
       return interpolate<linear>(xfirst, xlast, yfirst, x);
@@ -100,7 +98,7 @@ namespace leap { namespace lml
     auto d1 = (x1 == xfirst) ? (*y2-*y1) : (*(y2)-*(y1-1))/(*(x2)-*(x1-1))*(*x2-*x1);
     auto d2 = (x2+1 == xlast) ? (*y2-*y1) : (*(y2+1)-*(y1))/(*(x2+1)-*(x1))*(*x2-*x1);
 
-    double mu = (x-*x1)/(*x2-*x1);
+    auto mu = (x-*x1)/(*x2-*x1);
 
     auto A = 2*(*y1) - 2*(*y2) + d1 + d2;
     auto B = -3*(*y1) + 3*(*y2) - d1 - d1 - d2;
