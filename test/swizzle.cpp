@@ -199,7 +199,7 @@ static void SwizzleBasicTest()
   a.x = 9;
   a.zy = b.zy();
   a.yz = b.zy();
-  a.zy *= 2.5;
+  a.zy *= 2.5f;
 
   b = a;
 
