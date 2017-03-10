@@ -44,6 +44,7 @@ using namespace leap::threadlib;
 #  undef ECONNRESET
 #  define ECONNRESET WSAECONNRESET
 #  define poll WSAPoll
+#  define bind(s, a, l) ::bind(s, a, l)
 #else
 #  include <errno.h>
 #  include <netdb.h>
@@ -58,6 +59,7 @@ using namespace leap::threadlib;
 #  define SOCKET_ERROR -1
 #  define HOSTENT hostent
 #  define IN_ADDR in_addr
+#  define bind(s, a, l) ::bind(s, a, l)
 #  define closesocket(s) ::close(s)
 #  define GetLastError() errno
 #endif
@@ -273,11 +275,11 @@ namespace
   SocketWaitThread &socket_wait_thread()
   {
     static std::once_flag onceflag;
-    static std::unique_ptr<SocketWaitThread> instance;
+    static SocketWaitThread *instance;
 
-    call_once(onceflag, [] { instance.reset(new SocketWaitThread); });
+    call_once(onceflag, [] { instance = new SocketWaitThread; });
 
-    return *instance.get();
+    return *instance;
   }
 }
 
