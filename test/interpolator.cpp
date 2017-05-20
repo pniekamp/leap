@@ -135,10 +135,12 @@ static void ArrayInterpolatorTest()
 
     vector<double> xa[2] = { { 10.0, 20.0 }, { 0.0, 1.0, 2.0, 3.0 } };
 
-    if (!fcmp(interpolate<linear>(xa, ya, std::array<double, 2>{{12.0, 1.5}}.data()), 3.2))
+    double x[2] = { 12.0, 1.5 };
+
+    if (!fcmp(interpolate<linear>(xa, ya, x), 3.2))
       cout << "** Error on 2d Array Interpolation\n";
 
-    if (!fcmp(interpolate<cubic>(xa, ya, std::array<double, 2>{{12.0, 1.5}}.data()), 3.0125))
+    if (!fcmp(interpolate<cubic>(xa, ya, x), 3.0125))
       cout << "** Error on 2d Array Interpolation\n";
 
   }
@@ -153,16 +155,16 @@ static void ArrayInterpolatorTest()
 
     vector<double> xa[2] = { { 10.0 }, { 0.0, 1.0, 2.0, 3.0 } };
 
-    if (interpolate<linear>(xa, ya, std::array<double, 2>{{10, 2.5}}.data()) != 6.5)
+    if (interpolate<linear>(xa, ya, {10.0, 2.5}) != 6.5)
       cout << "** Error on 2d Array Interpolation\n";
 
-    if (interpolate<linear>(xa, ya, std::array<double, 2>{{10, 0}}.data()) != 0.0)
+    if (interpolate<linear>(xa, ya, {10.0, 0.0}) != 0.0)
       cout << "** Error on 2d Array Interpolation\n";
 
-    if (interpolate<linear>(xa, ya, std::array<double, 2>{{0, 0}}.data()) != 0.0)
+    if (interpolate<linear>(xa, ya, {0.0, 0.0}) != 0.0)
       cout << "** Error on 2d Array Interpolation\n";
 
-    if (interpolate<linear>(xa, ya, std::array<double, 2>{{99, 4}}.data()) != 14.0)
+    if (interpolate<linear>(xa, ya, {99.0, 4.0}) != 14.0)
       cout << "** Error on 2d Array Interpolation\n";
   }
 
@@ -188,17 +190,17 @@ static void ArrayInterpolatorTest()
 
     vector<double> xa[3] = { { 0.0, 1.0 }, { 5.0, 10.0 }, { 0.0, 1.0, 2.0, 3.0 } };
 
-    if (!fcmp(interpolate<linear>(xa, ya, std::array<double, 3>{{0.5, 6, 1.5}}.data()),4.2))
+    if (!fcmp(interpolate<linear>(xa, ya, {0.5, 6.0, 1.5}),4.2))
       cout << "** Error on 3d Array Interpolation\n";
 
-    if (!fcmp(interpolate<cubic>(xa, ya, std::array<double, 3>{{0.5, 6, 1.5}}.data()),4.0125))
+    if (!fcmp(interpolate<cubic>(xa, ya, {0.5, 6.0, 1.5}),4.0125))
       cout << "** Error on 3d Array Interpolation\n";
 
     clock_t s = clock();
 
     double sum = 0;
     for(int i = 0; i < 300000; ++i)
-      sum += interpolate<linear>(xa, ya, std::array<double, 3>{{0.5, 6, i/100000.0}}.data());
+      sum += interpolate<linear>(xa, ya, {0.5, 6.0, i/100000.0});
 
     cout << "  Sum: " << sum << " (" << (clock() - s)/(double)CLOCKS_PER_SEC << "s)\n";
 
@@ -206,7 +208,7 @@ static void ArrayInterpolatorTest()
 
     sum = 0;
     for(int i = 0; i < 300000; ++i)
-      sum += interpolate<cubic>(xa, ya, std::array<double, 3>{{0.5, 6, i/100000.0}}.data());
+      sum += interpolate<cubic>(xa, ya, {0.5, 6.0, i/100000.0});
 
     cout << "  Sum: " << sum << " (" << (clock() - s)/(double)CLOCKS_PER_SEC << "s)\n";
 

@@ -111,30 +111,9 @@ namespace leap { namespace lml
 
   //|///////////////////// interpolate //////////////////////////////////////
   template<InterpolationType type, typename P, typename Q>
-  auto interpolate(P &&xa, Q &&ya, typename std::decay_t<P>::value_type const &x)
+  auto interpolate(P const &xa, Q const &ya, typename std::decay_t<P>::value_type const &x)
   {
-    return interpolate<type>(xa.begin(), xa.end(), ya.begin(), x);
-  }
-
-
-  //|///////////////////// interpolate //////////////////////////////////////
-  template<typename P, typename Q>
-  auto interpolate(P &&xa, Q &&ya, typename std::decay_t<P>::value_type const &x, InterpolationType type)
-  {
-    switch (type)
-    {
-      case linear:
-        return interpolate<linear>(std::forward<P>(xa), std::forward<Q>(ya), x);
-
-      case cosine:
-        return interpolate<cosine>(std::forward<P>(xa), std::forward<Q>(ya), x);
-
-      case cubic:
-        return interpolate<cubic>(std::forward<P>(xa), std::forward<Q>(ya), x);
-
-      default:
-        throw std::logic_error("Unknown Interpolation Type");
-    }
+    return interpolate<type>(begin(xa), end(xa), begin(ya), x);
   }
 
 
@@ -166,7 +145,7 @@ namespace leap { namespace lml
   }
 
   template<InterpolationType type, typename T, size_t dimension, std::enable_if_t<type == linear>* = nullptr>
-  T interpolate(std::vector<double> const xa[dimension], lml::Array<T, dimension> const &ya, double const x[dimension])
+  T interpolate(std::vector<double> const (&xa)[dimension], lml::Array<T, dimension> const &ya, double const (&x)[dimension])
   {
     double mu[dimension];
     std::pair<size_t, size_t> idx[dimension];
@@ -192,6 +171,14 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// interpolate cosine ///////////////////////////////
+  template<InterpolationType type, typename T, size_t dimension, std::enable_if_t<type == cosine>* = nullptr>
+  T interpolate(std::vector<double> const (&xa)[dimension], lml::Array<T, dimension> const &ya, double const (&x)[dimension])
+  {
+    throw std::runtime_error("Not Implemented");
+  }
+
+
   //|///////////////////// interpolate cubic ///////////////////////////////
   namespace InterpolateCubicImpl
   {
@@ -214,7 +201,7 @@ namespace leap { namespace lml
   }
 
   template<InterpolationType type, typename T, size_t dimension, std::enable_if_t<type == cubic>* = nullptr>
-  T interpolate(std::vector<double> const xa[dimension], lml::Array<T, dimension> const &ya, double const x[dimension])
+  T interpolate(std::vector<double> const (&xa)[dimension], lml::Array<T, dimension> const &ya, double const (&x)[dimension])
   {
     std::pair<size_t, size_t> idx[dimension];
 
@@ -238,16 +225,19 @@ namespace leap { namespace lml
 
 
   //|///////////////////// interpolate //////////////////////////////////////
-  template<typename T, size_t dimension>
-  T interpolate(std::vector<double> const xa[dimension], lml::Array<T, dimension> const &ya, double const x[dimension], InterpolationType type)
+  template<typename P, typename Q, typename X>
+  auto interpolate(P &&xa, Q &&ya, X &&x, InterpolationType type)
   {
     switch (type)
     {
       case linear:
-        return interpolate<linear>(xa, ya, x);
+        return interpolate<linear>(std::forward<P>(xa), std::forward<Q>(ya), std::forward<X>(x));
+
+      case cosine:
+        return interpolate<cosine>(std::forward<P>(xa), std::forward<Q>(ya), std::forward<X>(x));
 
       case cubic:
-        return interpolate<cubic>(xa, ya, x);
+        return interpolate<cubic>(std::forward<P>(xa), std::forward<Q>(ya), std::forward<X>(x));
 
       default:
         throw std::logic_error("Unknown Interpolation Type");
