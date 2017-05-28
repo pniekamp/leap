@@ -674,7 +674,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// StreamSocket::init_stream ////////////////////////
-  void StreamSocket::init_stream()
+  StreamSocket::StreamState StreamSocket::init_stream()
   {
     m_bufferhead = 0;
     m_buffertail = 0;
@@ -684,6 +684,8 @@ namespace leap { namespace socklib
     m_status = SocketStatus::Connected;
 
     m_activity.release();
+
+    return StreamState::Ok;
   }
 
 
@@ -691,16 +693,13 @@ namespace leap { namespace socklib
   //
   // Moves data from the connected socket into the receive buffer.
   //
-  void StreamSocket::read_stream()
+  StreamSocket::StreamState StreamSocket::read_stream()
   {   
     size_t buffercount = m_buffercount.load(std::memory_order_relaxed);
 
-    // No Room in buffer... wait a while
+    // No Room in buffer...
     if (buffercount == m_buffer.size())
-    {
-      sleep_for(32);
-      return;
-    }
+      return StreamState::Stalled;
 
     void *buffer = m_buffer.data() + m_buffertail;
 
@@ -718,7 +717,7 @@ namespace leap { namespace socklib
       m_errorcondition = 0;
       m_status = SocketStatus::Cactus;
 
-      m_activity.release();
+      return StreamState::Dead;
     }
 
     // or an error occured...
@@ -732,7 +731,7 @@ namespace leap { namespace socklib
         m_errorcondition = result;
         m_status = SocketStatus::Cactus;
 
-        m_activity.release();
+        return StreamState::Dead;
       }
     }
 
@@ -750,6 +749,8 @@ namespace leap { namespace socklib
 
       m_activity.release();
     }
+
+    return StreamState::Ok;
   }
 
 
@@ -805,7 +806,7 @@ namespace leap { namespace socklib
   ///
   /// Parse the options string
   ///
-  /// \param[in] options string containing options (reconnect, keepalive)
+  /// \param[in] options string containing options
   ///
   void ServerSocket::parse_options(const char *options)
   {
@@ -1010,11 +1011,6 @@ namespace leap { namespace socklib
     if (m_options & Connectable)
     {
       m_connectedsocket = accept(m_listeningsocket, 0, 0);
-
-      if (m_connectedsocket == INVALID_SOCKET)
-      {
-        socket_wait_thread().await(m_listeningsocket, POLLIN, [=]() { handle_created(); });
-      }
     }
 
     if (m_connectedsocket != INVALID_SOCKET)
@@ -1031,30 +1027,49 @@ namespace leap { namespace socklib
 
       handle_connected();
     }
+    else
+    {
+      socket_wait_thread().await(m_listeningsocket, POLLIN, [=]() { handle_created(); });
+    }
   }
 
 
   //|///////////////////// ServerSocket::connected //////////////////////////
   void ServerSocket::handle_connected()
   {
-    read_stream();
+    auto R = read_stream();
 
-    if (m_status != SocketStatus::Connected)
+    switch(R)
     {
-      close_and_invalidate();
+      case StreamState::Ok:
+        socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
+        break;
 
-      if (m_options & Connectable)
-      {
-        handle_created();
-      }
-      else
-      {
-        m_destroysignal -= 1;
-      }
+      case StreamState::Stalled:
+        socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); }, 32);
+        break;
+
+      case StreamState::Dead:
+        handle_disconnect();
+        break;
+    }
+  }
+
+
+  //|///////////////////// ServerSocket::disconnect /////////////////////////
+  void ServerSocket::handle_disconnect()
+  {
+    close_and_invalidate();
+
+    m_activity.release();
+
+    if (m_options & Connectable)
+    {
+      handle_created();
     }
     else
     {
-      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
+      m_destroysignal -= 1;
     }
   }
 
@@ -1092,7 +1107,7 @@ namespace leap { namespace socklib
   ///
   /// Parse the options string
   ///
-  /// \param[in] options String containing options (reconnect, keepalive)
+  /// \param[in] options String containing options
   ///
   void ClientSocket::parse_options(const char *options)
   {
@@ -1282,7 +1297,7 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// ClientSocket::handle_created /////////////////////
+  //|///////////////////// ClientSocket::created ////////////////////////////
   void ClientSocket::handle_created()
   {
     if (m_destroysignal)
@@ -1292,55 +1307,62 @@ namespace leap { namespace socklib
       return;
     }
 
-    if (m_connect)
+    if (m_connectedsocket == INVALID_SOCKET)
     {
-      if (m_connectedsocket == INVALID_SOCKET)
+      if (!create_socket())
       {
-        if (!create_socket())
-        {
-          m_status = SocketStatus::Dead;
+        m_status = SocketStatus::Dead;
 
-          m_destroysignal -= 1;
+        m_destroysignal -= 1;
 
-          return;
-        }
+        return;
       }
+    }
 
-      if (connect_socket())
-      {
-        init_stream();
+    if (connect_socket())
+    {
+      init_stream();
 
-        handle_connected();
-      }
-      else
-      {
-        socket_wait_thread().await(m_connectedsocket, POLLOUT, [=]() { handle_created(); }, 2000);
-      }
+      handle_connected();
+    }
+    else
+    {
+      socket_wait_thread().await(m_connectedsocket, POLLOUT, [=]() { handle_created(); }, 2000);
     }
   }
 
 
-  //|///////////////////// ClientSocket::handle_connected ///////////////////
+  //|///////////////////// ClientSocket::connected //////////////////////////
   void ClientSocket::handle_connected()
   {
-    read_stream();
+    auto R = read_stream();
 
-    if (m_status != SocketStatus::Connected)
+    switch(R)
     {
-      close_and_invalidate();
+      case StreamState::Ok:
+        socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
+        break;
 
-      m_connect.reset();
+      case StreamState::Stalled:
+        socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); }, 32);
+        break;
 
-      m_activity.release();
-
-      m_destroysignal -= 1;
-
-      return;
+      case StreamState::Dead:
+        handle_disconnect();
+        break;
     }
-    else
-    {
-      socket_wait_thread().await(m_connectedsocket, POLLIN, [=]() { handle_connected(); });
-    }
+  }
+
+
+  //|///////////////////// ClientSocket::disconnect /////////////////////////
+  void ClientSocket::handle_disconnect()
+  {
+    close_and_invalidate();
+
+    m_connect.reset();
+    m_activity.release();
+
+    m_destroysignal -= 1;
   }
 
 
@@ -1398,7 +1420,7 @@ namespace leap { namespace socklib
 
     m_destroysignal += 1;
 
-    handle_connected();
+    handle_created();
 
     socket_wait_thread().signal(m_listeningsocket);
 
@@ -1525,8 +1547,8 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// SocketPump::handle_connected /////////////////////
-  void SocketPump::handle_connected()
+  //|///////////////////// SocketPump::created //////////////////////////////
+  void SocketPump::handle_created()
   {
     if (m_destroysignal)
     {
@@ -1537,7 +1559,7 @@ namespace leap { namespace socklib
 
     m_activity.release();
 
-    socket_wait_thread().await(m_listeningsocket, POLLIN, [=]() { handle_connected(); });
+    socket_wait_thread().await(m_listeningsocket, POLLIN, [=]() { handle_created(); });
   }
 
 
@@ -1824,7 +1846,7 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// BroadcastSocket::handle_created //////////////////
+  //|///////////////////// BroadcastSocket::created /////////////////////////
   void BroadcastSocket::handle_created()
   {
     if (m_destroysignal)

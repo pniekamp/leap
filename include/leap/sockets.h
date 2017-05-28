@@ -214,8 +214,15 @@ namespace leap { namespace socklib
       StreamSocket();
       ~StreamSocket() = default;
 
-      void init_stream();
-      void read_stream();
+      enum class StreamState
+      {
+        Ok,
+        Stalled,
+        Dead
+      };
+
+      StreamState init_stream();
+      StreamState read_stream();
 
       void destroy();
 
@@ -264,6 +271,7 @@ namespace leap { namespace socklib
       void close_listener();
       void handle_created();
       void handle_connected();
+      void handle_disconnect();
 
       unsigned int m_port;
 
@@ -312,6 +320,7 @@ namespace leap { namespace socklib
       void close_and_invalidate();
       void handle_created();
       void handle_connected();
+      void handle_disconnect();
 
       unsigned int m_port;
       std::string m_address;
@@ -375,7 +384,7 @@ namespace leap { namespace socklib
 
       bool create_and_bind();
       void close_listener();
-      void handle_connected();
+      void handle_created();
 
       unsigned int m_port;
 
