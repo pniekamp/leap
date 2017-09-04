@@ -132,7 +132,7 @@ namespace leap { namespace lml
     template<size_t dimension, typename T>
     T interpolate(ArrayView<T const *, dimension> const &ya, std::pair<size_t, size_t> const *idx, double const *mu)
     {
-      std::array<T, 2> yaa;
+      std::array<T, 2> yaa = {};
 
       for(auto i = idx->first; i != idx->second; ++i)
         yaa[i-idx->first] = interpolate<dimension-1>(ya[i], idx+1, mu+1);

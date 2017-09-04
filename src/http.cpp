@@ -115,6 +115,8 @@ namespace
 
         state.step = 3;
 
+        [[fallthrough]];
+
       case 3:
 
         // Start Read Payload
@@ -129,6 +131,8 @@ namespace
 
         state.step = 4;
 
+        [[fallthrough]];
+        
       case 4:
 
         // Start Read Chunk
@@ -143,6 +147,8 @@ namespace
         }
 
         state.step = 5;
+
+        [[fallthrough]];
 
       case 5:
 
@@ -161,6 +167,8 @@ namespace
         }
 
         state.step = 6;
+
+        [[fallthrough]];
 
       case 6:
 
@@ -260,6 +268,8 @@ namespace
         msg->clear();
 
         state.step = 1;
+
+        [[fallthrough]];
 
       case 1:
 
@@ -820,11 +830,15 @@ namespace leap { namespace socklib
 
             step = 1;
 
+            [[fallthrough]];
+
           case 1:
 
             send_http_request(connection, request);
 
             step = 2;
+
+            [[fallthrough]];
 
           case 2:
 
