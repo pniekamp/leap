@@ -15,9 +15,9 @@
 #ifndef SAPSTREAM_HH
 #define SAPSTREAM_HH
 
+#include <leap/util.h>
 #include <sstream>
 #include <fstream>
-#include <leap/util.h>
 
 /**
  * \namespace leap
@@ -70,6 +70,7 @@ namespace leap
       typedef basic_sapentry<T, traits> entry_type;
       typedef std::basic_string<T, traits> string_type;
       typedef std::basic_streambuf<T, traits> streambuf_type;
+      typedef basic_string_view<T, traits> string_view_type;
 
       enum ParseFlags
       {
@@ -84,7 +85,7 @@ namespace leap
 
       void set_parse_options(long flags);
 
-      void define(string_type const &name, string_type const &value);
+      void define(string_type name, string_type value);
 
       operator bool() const { return (m_state == std::ios_base::goodbit); }
 
@@ -111,18 +112,12 @@ namespace leap
       void parse_headerline(T *buffer1, entry_type *entry);
       void parse_entryline(T *buffer, entry_type *entry);
 
-      string_type expand(string_type const &src);
+      string_type expand(string_view_type src);
 
     private:
 
       struct Variable
       {
-        Variable(string_type const &n, string_type const &v)
-          : name(n),
-            value(v)
-        {
-        }
-
         string_type name;
         string_type value;
       };
@@ -163,9 +158,9 @@ namespace leap
 
   //|///////////////////// sapstream::define ////////////////////////////////
   template<typename T, class traits>
-  void basic_sapstream<T, traits>::define(string_type const &name, string_type const &value)
+  void basic_sapstream<T, traits>::define(string_type name, string_type value)
   {
-    m_variables.push_back(Variable(name, value));
+    m_variables.push_back({ std::move(name), std::move(value) });
   }
 
 
@@ -389,27 +384,27 @@ namespace leap
 
   //|///////////////////// sapstream::expand ////////////////////////////////
   template<typename T, class traits>
-  std::basic_string<T, traits> basic_sapstream<T, traits>::expand(string_type const &src)
+  std::basic_string<T, traits> basic_sapstream<T, traits>::expand(string_view_type src)
   {
     string_type result;
 
     size_t pos = 0;
     size_t next = 0;
 
-    while ((next = src.find('$', next)) != string_type::npos)
+    while ((next = src.find('$', next)) != string_view_type::npos)
     {
       size_t beg = src.find('{', next+1);
       size_t end = src.find('}', next+1);
 
-      if (beg == next+1 && end != string_type::npos)
+      if (beg == next+1 && end != string_view_type::npos)
       {
         // Extract Variable Name
-        string_type varname = src.substr(beg+1, end-beg-1);
+        auto varname = src.substr(beg+1, end-beg-1);
 
         string_type varvalue;
         for(size_t j = 0; j < m_variables.size(); ++j)
         {
-          if (m_variables[j].name == varname)
+          if (strcmp(m_variables[j].name, varname) == 0)
           {
             varvalue = expand(m_variables[j].value);
             break;
@@ -419,10 +414,10 @@ namespace leap
         if (!varvalue.empty())
         {
           // Copy in preceeding text
-          result += src.substr(pos, next-pos);
+          result.append(src.begin() + pos, src.begin() + next);
 
           // Copy in variable text
-          result += varvalue;
+          result.append(varvalue.begin(), varvalue.end());
 
           pos = end+1;
           next = end;
@@ -432,7 +427,7 @@ namespace leap
       ++next;
     }
 
-    result += src.substr(pos);
+    result.append(src.begin() + pos, src.end());
 
     return result;
   }
@@ -533,14 +528,10 @@ namespace leap
     public:
 
       typedef std::basic_string<T, traits> string_type;
+      typedef basic_string_view<T, traits> string_view_type;
 
       struct Attribute
       {
-        Attribute(string_type const &n, string_type const &v)
-          : name(n), value(v)
-        {
-        }
-
         string_type name;
         string_type value;
       };
@@ -550,11 +541,11 @@ namespace leap
     public:
       basic_sapentry();
 
-      bool defined(const T *name) const;
+      bool defined(string_view_type name) const;
 
-      string_type lookup(const T *name, const T *defval = {}) const;
+      string_type lookup(string_view_type name, string_type defval = {}) const;
 
-      string_type const &operator [](const T *name) const;
+      string_type const &operator [](string_view_type name) const;
 
     public:
 
@@ -569,9 +560,9 @@ namespace leap
 
       void clear();
 
-      void add(string_type const &name, string_type const &value);
+      void add(string_type name, string_type value);
 
-      void push_substream(const basic_sapstream<T, traits> &stream);
+      void push_substream(basic_sapstream<T, traits> const &stream);
 
       basic_sapstream<T, traits> &substream();
 
@@ -607,15 +598,15 @@ namespace leap
 
   //|///////////////////// sapentry::add ////////////////////////////////////
   template<typename T, class traits>
-  void basic_sapentry<T, traits>::add(string_type const &name, string_type const &value)
+  void basic_sapentry<T, traits>::add(string_type name, string_type value)
   {
-    m_attributes.push_back(Attribute(name, value));
+    m_attributes.push_back({ std::move(name), std::move(value) });
   }
 
 
   //|///////////////////// sapentry::push_substream /////////////////////////
   template<typename T, class traits>
-  void basic_sapentry<T, traits>::push_substream(const basic_sapstream<T, traits> &stream)
+  void basic_sapentry<T, traits>::push_substream(basic_sapstream<T, traits> const &stream)
   {
     m_substream = stream;
   }
@@ -631,11 +622,11 @@ namespace leap
 
   //|///////////////////// sapentry::defined ////////////////////////////////
   template<typename T, class traits>
-  bool basic_sapentry<T, traits>::defined(const T *name) const
+  bool basic_sapentry<T, traits>::defined(string_view_type name) const
   {
     for(auto &attribute : m_attributes)
     {
-      if (stricmp(attribute.name.c_str(), name) == 0)
+      if (stricmp(attribute.name, name) == 0)
         return true;
     }
 
@@ -645,27 +636,27 @@ namespace leap
 
   //|///////////////////// sapentry::lookup /////////////////////////////////
   template<typename T, class traits>
-  std::basic_string<T, traits> basic_sapentry<T, traits>::lookup(const T *name, const T *defval) const
+  std::basic_string<T, traits> basic_sapentry<T, traits>::lookup(string_view_type name, string_type defval) const
   {
     for(auto &attribute : m_attributes)
     {
-      if (stricmp(attribute.name.c_str(), name) == 0)
+      if (stricmp(attribute.name, name) == 0)
         return attribute.value;
     }
 
-    return defval;
+    return std::move(defval);
   }
 
 
   //|///////////////////// sapentry::operator[] /////////////////////////////
   template<typename T, class traits>
-  std::basic_string<T, traits> const &basic_sapentry<T, traits>::operator[](T const *name) const
+  std::basic_string<T, traits> const &basic_sapentry<T, traits>::operator[](string_view_type name) const
   {
     static std::basic_string<T, traits> nullstr;
 
     for(auto &attribute : m_attributes)
     {
-      if (stricmp(attribute.name.c_str(), name) == 0)
+      if (stricmp(attribute.name, name) == 0)
         return attribute.value;
     }
 
@@ -680,7 +671,7 @@ namespace leap
   class basic_issapstream : public basic_sapstream<T, traits>
   {
     public:
-      basic_issapstream(const std::basic_string<T, traits> &str);
+      basic_issapstream(std::basic_string<T, traits> const &str);
       ~basic_issapstream();
   };
 
@@ -690,7 +681,7 @@ namespace leap
 
   //|///////////////////// issapstream::Constructor /////////////////////////
   template<typename T, class traits>
-  basic_issapstream<T, traits>::basic_issapstream(const std::basic_string<T, traits> &str)
+  basic_issapstream<T, traits>::basic_issapstream(std::basic_string<T, traits> const &str)
   {
     this->rdbuf(new std::basic_stringbuf<T, traits>(str));
   }
@@ -741,7 +732,6 @@ namespace leap
   {
     delete basic_sapstream<T, traits>::rdbuf();
   }
-
 
 
 } // namespace

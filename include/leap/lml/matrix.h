@@ -15,7 +15,6 @@
 #include <leap/lml/vector.h>
 #include <leap/lml/simplematrix.h>
 
-
 /**
  * \namespace leap::lml
  * \brief Leap Math Library containing mathmatical routines
@@ -88,7 +87,7 @@ namespace leap { namespace lml
       constexpr Matrix(std::initializer_list<T> m);
       constexpr Matrix(std::initializer_list<std::initializer_list<T>> m);
       explicit constexpr Matrix(T k);
-      explicit Matrix(std::vector<std::vector<T>> const &m);
+      explicit constexpr Matrix(std::array<std::array<T, N>, M> const &m);
 
       template<typename Q, template<typename, size_t, size_t> class C>
       Matrix(Matrix<Q, M, N, C> const &other);
@@ -101,18 +100,22 @@ namespace leap { namespace lml
       static constexpr size_t columns() { return N; }
 
       constexpr data_type const &data() const { return base_type::data(); }
-      data_type &data() { return base_type::data(); }
+      constexpr data_type &data() { return base_type::data(); }
 
       // Element Access
       constexpr T const &operator()(size_t i, size_t j) const { return base_type::operator()(i, j); }
-      T &operator()(size_t i, size_t j) { return base_type::operator()(i, j); }
+      constexpr T &operator()(size_t i, size_t j) { return base_type::operator()(i, j); }
   };
 
 
   //|///////////////////// Matrix::Constructor //////////////////////////////
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   constexpr Matrix<T, M, N, B>::Matrix(std::initializer_list<T> m)
+    : B<T, M, N>()
   {
+    if (m.size() != M*N)
+      throw 0;
+
     auto v = m.begin();
 
     for(size_t i = 0; i < M; ++i)
@@ -124,9 +127,16 @@ namespace leap { namespace lml
   //|///////////////////// Matrix::Constructor //////////////////////////////
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   constexpr Matrix<T, M, N, B>::Matrix(std::initializer_list<std::initializer_list<T>> m)
+    : B<T, M, N>()
   {
+    if (m.size() != M)
+      throw 0;
+
     for(size_t i = 0; i < M; ++i)
     {
+      if (std::next(m.begin(), i)->size() != N)
+        throw 0;
+
       auto v = std::next(m.begin(), i)->begin();
 
       for(size_t j = 0; j < N; ++j)
@@ -138,6 +148,7 @@ namespace leap { namespace lml
   //|///////////////////// Matrix::Constructor //////////////////////////////
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   constexpr Matrix<T, M, N, B>::Matrix(T k)
+    : B<T, M, N>()
   {
     for(size_t i = 0; i < M; ++i)
       for(size_t j = 0; j < N; ++j)
@@ -147,10 +158,11 @@ namespace leap { namespace lml
 
   //|///////////////////// Matrix::Constructor //////////////////////////////
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
-  Matrix<T, M, N, B>::Matrix(std::vector<std::vector<T>> const &m)
+  constexpr Matrix<T, M, N, B>::Matrix(std::array<std::array<T, N>, M> const &m)
+    : B<T, M, N>()
   {
-    for(size_t i = 0; i < std::min(M, m.size()); ++i)
-      for(size_t j = 0; j < std::min(N, m[i].size()); ++j)
+    for(size_t i = 0; i < M; ++i)
+      for(size_t j = 0; j < N; ++j)
         (*this)(i, j) = m[i][j];
   }
 
@@ -159,6 +171,7 @@ namespace leap { namespace lml
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B>
   template<typename Q, template<typename, size_t, size_t> class C>
   Matrix<T, M, N, B>::Matrix(Matrix<Q, M, N, C> const &other)
+    : B<T, M, N>()
   {
     for(size_t i = 0; i < M; ++i)
       for(size_t j = 0; j < N; ++j)

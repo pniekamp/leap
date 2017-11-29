@@ -22,9 +22,9 @@ void RegExTest();
 ////////// print_w ///////////
 template<typename T> struct print_w
 {
-  void operator()(const string &w)
+  void operator()(string_view w)
   {
-    cout << "'" << ato<T>(w) << "' ";    
+    cout << "'" << ato<T>(w) << "' ";
   }
 };
 
@@ -117,7 +117,7 @@ static void SimpleRegExTests()
 
   cout << "  Group Marking...\n";
 
-  vector<string> split;
+  vector<string_view> split;
 
   if (!match("^(?:(.+)(?:[[:space:]]+|$))*$", "This is a test", &split))
     cout << "** Split Set Match Failed\n";
@@ -126,7 +126,7 @@ static void SimpleRegExTests()
   for_each(split.begin(), split.end(), print_w<string>());
   cout << "\n";
 
-  vector<string> numbers;
+  vector<string_view> numbers;
 
   if (!match("^[[:space:]]*(?:([+-[:digit:]\\.Ee]+)(?:[[:space:]]+|$))*$", " 1 2 6.4 -12E04\t+0.11", &numbers))
     cout << "** Number Set Match Failed\n";
@@ -135,7 +135,7 @@ static void SimpleRegExTests()
   for_each(numbers.begin(), numbers.end(), print_w<double>());
   cout << "\n";
 
-  vector<string> words;
+  vector<string_view> words;
   
   if (!match("^[[:space:]]*(?:((?:\"[^\"]+\"|[^[:space:]]+))(?:[[:space:]]+|$))*$", "  dogs, cats and \"other things\" (mice?)", &words))
     cout << "** Word Set Match Failed\n";

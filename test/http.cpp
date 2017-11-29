@@ -29,24 +29,24 @@ struct Timer
 void TestRequest()
 {
   HTTPRequest request1("GET", "www.example.com/path/index.html");
-  cout << "  " << request1.method() << " http://" << request1.server() << ":" << request1.port() << request1.location() << "\n";
+  cout << "  " << request1.method() << " http://" << request1.server() << ":" << request1.service() << request1.location() << "\n";
 
   if (request1.server() != "www.example.com")
     cout << "** Wrong Domain\n";
 
-  if (request1.port() != 80)
+  if (request1.service() != "80")
     cout << "** Wrong Port\n";
 
   if (request1.location() != "/path/index.html")
     cout << "** Wrong Location";
 
   HTTPRequest request2("GET", "http://www.example.com:81/path/index.html");
-  cout << "  " << request2.method() << " http://" << request2.server() << ":" << request2.port() << request2.location() << "\n";
+  cout << "  " << request2.method() << " http://" << request2.server() << ":" << request2.service() << request2.location() << "\n";
 
   if (request2.server() != "www.example.com")
     cout << "** Wrong Domain\n";
 
-  if (request2.port() != 81)
+  if (request2.service() != "81")
     cout << "** Wrong Port\n";
 
   if (request2.location() != "/path/index.html")

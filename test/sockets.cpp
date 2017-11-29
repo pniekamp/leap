@@ -7,6 +7,8 @@
 // The code contained herein is licensed for use without limitation
 //
 
+#define _WIN32_WINNT 0x600
+
 #include <iostream>
 #include <chrono>
 #include <leap/sockets.h>
@@ -44,7 +46,7 @@ static void SimpleSocketTest()
   Timer tm;
 
   ServerSocket server(1200);
-  ClientSocket client("localhost", 1200);
+  ClientSocket client("localhost", "1200");
 
   string lastserver;
   string lastclient;
@@ -144,7 +146,7 @@ static void BroadcastSocketTest()
 static void SocketPumpTest()
 {
   socket_t socket;
-  sockaddr_in addr;
+  sockaddr_t addr;
 
   cout << "Socket Pump Test Set\n";
 
@@ -154,7 +156,7 @@ static void SocketPumpTest()
     cout << "  ** Invalid Connection\n";
 
   {
-    ClientSocket client("localhost", 1201);
+    ClientSocket client("127.0.0.1", "1201");
 
     client.wait_on_connect(1000);
 
@@ -163,7 +165,22 @@ static void SocketPumpTest()
     if (!pump.accept_connection(&socket, &addr))
       cout << "  ** Missing Connection\n";
 
-    cout << "  Connected " << inet_ntoa(addr.sin_addr) << endl;
+    char name[128];
+    cout << "  Connected " << inet_ntop(addr.sin6_family, &addr.sin6_addr, name, sizeof(name)) << endl;
+  }
+
+  {
+    ClientSocket client("::1", "1201");
+
+    client.wait_on_connect(1000);
+
+    pump.wait_for_connection(100);
+
+    if (!pump.accept_connection(&socket, &addr))
+      cout << "  ** Missing Connection\n";
+
+    char name[128];
+    cout << "  Connected " << inet_ntop(addr.sin6_family, &addr.sin6_addr, name, sizeof(name)) << endl;
   }
 
   cout << endl;

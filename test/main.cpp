@@ -14,7 +14,6 @@ using namespace std;
 extern void ArrayTest();  // array.cpp
 extern void VectorTest();  // vector.cpp
 extern void MatrixTest();  // matrix.cpp
-extern void SwizzleTest();  // swizzle.cpp
 extern void EvaluatorTest();  // evaluator.cpp
 extern void InterpolatorTest();  // interpolator.cpp
 extern void SigLibTest(); // siglib.cpp
@@ -43,8 +42,6 @@ int main(int argc, char *args[])
 
     MatrixTest();
 
-    SwizzleTest();
-
     EvaluatorTest();
 
     InterpolatorTest();
@@ -53,11 +50,11 @@ int main(int argc, char *args[])
 
     SAPStreamTest();
 
+    RegExTest();
+
     ThreadTest();
 
     SocketTest();
-
-    RegExTest();
 
     UtilTest();
 

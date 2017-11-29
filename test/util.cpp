@@ -20,6 +20,22 @@ void UtilTest()
 {
   cout << "Util Test\n\n";
 
+  float i = ato<float>("1");
+  if (i != 1)
+    cout << "** Error in ato<int>\n";
+
+  float f = ato<float>("2.0");
+  if (f != 2.0f)
+    cout << "** Error in ato<float>\n";
+
+  double d = ato<float>("3.0");
+  if (d != 3.0f)
+    cout << "** Error in ato<double>\n";
+
+  string s = ato<string>("4.0");
+  if (s != "4.0")
+    cout << "** Error in ato<string>\n";
+
   vector<double> a;
   a.push_back(1.0);
   a.push_back(2.0);
@@ -49,12 +65,12 @@ TODO
 */
   cout << endl;
 
-  cout << "  " << '"' << trim("abcd") << '"' << endl;
-  cout << "  " << '"' << trim("abcd  ") << '"' << endl;
-  cout << "  " << '"' << trim("  abcd") << '"' << endl;
-  cout << "  " << '"' << trim("  abcd  ") << '"' << endl;
-  cout << "  " << '"' << trim("") << '"' << endl;
-  cout << "  " << '"' << trim("  ") << '"' << endl;
+  cout << "  " << '"' << trim("abcd").to_string() << '"' << endl;
+  cout << "  " << '"' << trim("abcd  ").to_string() << '"' << endl;
+  cout << "  " << '"' << trim("  abcd").to_string() << '"' << endl;
+  cout << "  " << '"' << trim("  abcd  ").to_string() << '"' << endl;
+  cout << "  " << '"' << trim("").to_string() << '"' << endl;
+  cout << "  " << '"' << trim("  ").to_string() << '"' << endl;
 
   cout << endl;
 }

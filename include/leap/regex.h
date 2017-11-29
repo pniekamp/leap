@@ -15,6 +15,7 @@
 #ifndef REGEX_HH
 #define REGEX_HH
 
+#include <leap/stringview.h>
 #include <vector>
 #include <bitset>
 #include <memory>
@@ -55,7 +56,7 @@ namespace leap { namespace regex
       public:
         RegExContext();
 
-        const char *startofline;
+        string_view str;
     };
 
 
@@ -67,8 +68,7 @@ namespace leap { namespace regex
 
         void accept(RegExStateVisitor &visitor);
 
-        const char *first;
-        const char *last;
+        const char *beg, *end;
 
         size_t count;
 
@@ -99,8 +99,8 @@ namespace leap { namespace regex
 
         virtual void set_repeat(RepeatType const &repeat) = 0;
 
-        virtual bool consider_first(const char *str, RegExState &state) const = 0;
-        virtual bool consider_next(RegExState &state) const = 0;
+        virtual bool consider_first(const char *&pos, RegExState &state) const = 0;
+        virtual bool consider_next(const char *&pos, RegExState &state) const = 0;
     };
 
 
@@ -113,10 +113,10 @@ namespace leap { namespace regex
 
         virtual void set_repeat(RepeatType const &repeat);
 
-        virtual bool consider_first(const char *str, RegExState &state) const;
-        virtual bool consider_next(RegExState &state) const;
+        virtual bool consider_first(const char *&pos, RegExState &state) const;
+        virtual bool consider_next(const char *&pos, RegExState &state) const;
 
-        virtual bool consider_one(const char *str, RegExState &state) const = 0;
+        virtual bool consider_one(const char *&pos, RegExState &state) const = 0;
 
       protected:
 
@@ -131,12 +131,12 @@ namespace leap { namespace regex
         RegExCore();
         virtual ~RegExCore();
 
-        void define(const char *rex);
+        void define(string_view str);
 
       public:
 
-        virtual bool consider_one(const char *str, RegExState &state) const;
-        virtual bool consider_next(RegExState &state) const;
+        virtual bool consider_one(const char *&pos, RegExState &state) const;
+        virtual bool consider_next(const char *&pos, RegExState &state) const;
 
       private:
 
@@ -148,10 +148,10 @@ namespace leap { namespace regex
     class RegExGroup : public RegExCore
     {
       public:
-        RegExGroup(const char *group);
+        RegExGroup(string_view group);
         virtual ~RegExGroup();
 
-        virtual bool consider_first(const char *str, RegExState &state) const;
+        virtual bool consider_first(const char *&pos, RegExState &state) const;
 
       private:
 
@@ -163,12 +163,12 @@ namespace leap { namespace regex
     class RegExFilter : public RegExCommon
     {
       public:
-        RegExFilter(const char *filter);
+        RegExFilter(string_view filter);
         virtual ~RegExFilter();
 
       public:
 
-        virtual bool consider_one(const char *str, RegExState &state) const;
+        virtual bool consider_one(const char *&pos, RegExState &state) const;
 
       private:
 
@@ -187,8 +187,8 @@ namespace leap { namespace regex
 
         virtual void set_repeat(RepeatType const &repeat);
 
-        virtual bool consider_first(const char *str, RegExState &state) const;
-        virtual bool consider_next(RegExState &state) const;
+        virtual bool consider_first(const char *&pos, RegExState &state) const;
+        virtual bool consider_next(const char *&pos, RegExState &state) const;
 
       private:
 
@@ -206,7 +206,7 @@ namespace leap { namespace regex
 
       public:
 
-        virtual bool consider_one(const char *str, RegExState &state) const;
+        virtual bool consider_one(const char *&pos, RegExState &state) const;
     };
 
 
@@ -219,7 +219,7 @@ namespace leap { namespace regex
 
       public:
 
-        virtual bool consider_one(const char *str, RegExState &state) const;
+        virtual bool consider_one(const char *&pos, RegExState &state) const;
     };
 
   } // namespace RegExImpl
@@ -247,13 +247,15 @@ namespace leap { namespace regex
     public:
       RegEx();
       RegEx(const char *str);
+      RegEx(std::string const &str);
+      RegEx(string_view str);
 
-      void prepare(const char *str);
+      void prepare(string_view str);
 
     private:
 
-      friend bool match(RegEx const &rex, const char *str, std::vector<std::string> *groups);
-      friend bool search(RegEx const &rex, const char *str, std::vector<std::string> *groups);
+      friend bool match(RegEx const &rex, string_view str, std::vector<string_view> *groups);
+      friend bool search(RegEx const &rex, string_view str, std::vector<string_view> *groups);
 
       RegExImpl::RegExCore m_regex;
   };
@@ -267,8 +269,7 @@ namespace leap { namespace regex
   /// \param[in] str The string to match
   /// \param[out] groups Optionally return any groups
   ///
-  bool match(RegEx const &rex, const char *str, std::vector<std::string> *groups = NULL);
-
+  bool match(RegEx const &rex, string_view str, std::vector<string_view> *groups = nullptr);
 
   //|///////////////////////// search ///////////////////////////////////////
   ///
@@ -278,7 +279,7 @@ namespace leap { namespace regex
   /// \param[in] str The string to match
   /// \param[out] groups Optionally return any groups
   ///
-  bool search(RegEx const &rex, const char *str, std::vector<std::string> *groups = NULL);
+  bool search(RegEx const &rex, string_view str, std::vector<string_view> *groups = nullptr);
 
 } } // namespace regex
 

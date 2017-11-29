@@ -18,9 +18,10 @@
 #include <leap/sockets.h>
 #include <leap/siglib.h>
 #include <leap/concurrentqueue.h>
+#include <leap/stringview.h>
 #include <string>
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <algorithm>
 
@@ -44,9 +45,9 @@ namespace leap { namespace socklib
 
       int status() const { return m_status; }
 
-      std::string header(std::string const &name, std::string const &defaultvalue = "") const;
+      std::string const &header(string_view name) const;
 
-      std::unordered_map<std::string, std::string> const &headers() const { return m_header; }
+      std::map<std::string, std::string, std::less<>> const &headers() const { return m_header; }
 
       std::vector<char> const &payload() const { return m_payload; }
 
@@ -58,9 +59,10 @@ namespace leap { namespace socklib
 
       void set_status(int status);
 
-      void add_header(std::string const &header);
+      void add_header(string_view header);
+      void add_header(std::string name, std::string value);
 
-      void add_payload(const std::string &buffer);
+      void add_payload(string_view buffer);
       void add_payload(const char *buffer, size_t bytes);
 
       char *reserve_payload(size_t bytes);
@@ -70,7 +72,7 @@ namespace leap { namespace socklib
 
       int m_status;
 
-      std::unordered_map<std::string, std::string> m_header;
+      std::map<std::string, std::string, std::less<>> m_header;
 
       std::vector<char> m_payload;
   };
@@ -87,11 +89,11 @@ namespace leap { namespace socklib
   {
     public:
       explicit HTTPRequest(int status = 408);
-      explicit HTTPRequest(std::string const &method, std::string const &url, std::string const &payload = "");
-      explicit HTTPRequest(std::string const &method, std::string const &server, unsigned int port, std::string const &location, std::string const &payload = "");
+      explicit HTTPRequest(std::string method, string_view url, string_view payload = "");
+      explicit HTTPRequest(std::string method, std::string server, std::string service, std::string location, string_view payload = "");
 
       std::string const &server() const { return m_server; }
-      unsigned int port() const { return m_port; }
+      std::string const &service() const { return m_service; }
 
       std::string const &method() const { return m_method; }
       std::string const &location() const { return m_location; }
@@ -102,13 +104,13 @@ namespace leap { namespace socklib
 
       void clear();
 
-      void set_method(std::string const &method);
-      void set_location(std::string const &location);
+      void set_method(std::string method);
+      void set_location(std::string location);
 
     private:
 
       std::string m_server;
-      unsigned int m_port;
+      std::string m_service;
 
       std::string m_method;
       std::string m_location;
@@ -125,10 +127,10 @@ namespace leap { namespace socklib
   class HTTPResponse : public HTTPBase
   {
     public:
-      explicit HTTPResponse(int status = 200, std::string const &statustxt = "OK");
-      explicit HTTPResponse(std::string const &payload, std::string const &contenttype = "text/html");
+      explicit HTTPResponse(int status = 200, std::string statustxt = "OK");
+      explicit HTTPResponse(string_view payload, std::string contenttype = "text/html");
 
-      void set_statustxt(std::string const &statustxt);
+      void set_statustxt(std::string statustxt);
 
       virtual std::string head() const;
 
@@ -183,11 +185,11 @@ namespace leap { namespace socklib
 
     public:
       WebSocketMessage();
-      explicit WebSocketMessage(std::string const &payload);
+      explicit WebSocketMessage(string_view payload);
 
       MessageType type() const { return m_type; }
 
-      std::string endpoint() const { return m_endpoint; }
+      std::string const &endpoint() const { return m_endpoint; }
 
       std::vector<char> const &payload() const { return m_payload; }
 
@@ -197,9 +199,9 @@ namespace leap { namespace socklib
 
       void set_type(MessageType type);
 
-      void set_endpoint(std::string const &endpoint);
+      void set_endpoint(std::string endpoint);
 
-      void add_payload(const std::string &buffer);
+      void add_payload(string_view buffer);
       void add_payload(const char *buffer, size_t bytes);
 
       char *reserve_payload(size_t bytes);
@@ -237,10 +239,10 @@ namespace leap { namespace socklib
 
     public:
       WebSocket();
-      explicit WebSocket(std::string const &url, std::string const &protocols = "");
+      explicit WebSocket(std::string url, std::string protocols = "");
       ~WebSocket();
 
-      bool create(std::string const &url, std::string const &protocols = "");
+      bool create(std::string url, std::string protocols = "");
 
       void destroy();
 
@@ -275,14 +277,14 @@ namespace leap { namespace socklib
 
     private:
 
-      SocketState m_state;
-
       std::string m_url;
       std::string m_protocols;
 
       /*std::atomic<*/std::function<void ()> m_onconnect;
       /*std::atomic<*/std::function<void (WebSocketMessage const &)> m_onmessage;
       /*std::atomic<*/std::function<void ()> m_ondisconnect;
+
+      std::atomic<SocketState> m_state;
 
       leap::socklib::ClientSocket m_socket;
 
@@ -327,11 +329,11 @@ namespace leap { namespace socklib
       ~HTTPServer();
 
       bool send(socket_t connection, HTTPResponse const &response);
-      bool send_file(socket_t connection, std::string const &path, std::string const &contenttype);
+      bool send_file(socket_t connection, const char *path, const char *contenttype);
 
       bool send(socket_t connection, WebSocketMessage const &message);
 
-      void broadcast(std::string const &endpoint, WebSocketMessage const &message, socket_t ignore = 0);
+      void broadcast(string_view endpoint, WebSocketMessage const &message, socket_t ignore = 0);
 
       void drop(socket_t connection);
 
@@ -387,7 +389,7 @@ namespace leap { namespace socklib
   // base64
   std::string base64_encode(std::vector<uint8_t> const &payload);
   std::string base64_encode(const void *payload, size_t size);
-  std::vector<uint8_t> base64_decode(std::string const &payload);
+  std::vector<uint8_t> base64_decode(string_view payload);
 
 } } // namespace socklib
 

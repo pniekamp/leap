@@ -273,16 +273,14 @@ namespace leap { namespace lml
   /// \param[in] name Variable Name
   /// \param[in] value Variable Value
   ///
-  void Evaluator::add_variable(const char *name, double value)
+  void Evaluator::add_variable(string_view name, double value)
   {
-    size_t len = strlen(name);
-
-    if (len >= sizeof(Variable::name))
+    if (name.size() >= sizeof(Variable::name))
       throw eval_error("name length overflow");
 
     for(size_t i = 0; i < m_variables.size(); ++i)
     {
-      if (stricmp(m_variables[i].name, name) == 0)
+      if (stricmp(string_view(m_variables[i].name, m_variables[i].len), name) == 0)
       {
         m_variables[i].value = { value };
         return;
@@ -290,8 +288,8 @@ namespace leap { namespace lml
     }
 
     Variable variable;
-    variable.len = len;
-    strncpy(variable.name, name, sizeof(variable.name));
+    variable.len = name.size();
+    strlcpy(variable.name, name.data(), name.size()+1);
     variable.value = { value };
 
     m_variables.push_back(variable);
@@ -329,7 +327,7 @@ namespace leap { namespace lml
 
     for(size_t i = 0; i < m_variables.size(); ++i)
     {
-      if (m_variables[i].len == len && strincmp(m_variables[i].name, arg, len) == 0)
+      if (stricmp(string_view(arg, len), string_view(m_variables[i].name, m_variables[i].len)) == 0)
         return m_variables[i].value;
     }
 

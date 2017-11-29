@@ -11,6 +11,7 @@
 #ifndef LMLEVALUATOR_HH
 #define LMLEVALUATOR_HH
 
+#include <leap/stringview.h>
 #include <vector>
 #include <functional>
 
@@ -67,7 +68,7 @@ namespace leap { namespace lml
     public:
       Evaluator();
 
-      void add_variable(const char *name, double value);
+      void add_variable(string_view name, double value);
       void remove_all_variables();
 
       void define_evalhook(double(*hook)(Evaluator const &, const char *, size_t));

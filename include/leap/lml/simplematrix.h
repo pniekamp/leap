@@ -47,7 +47,7 @@ namespace leap { namespace lml
 
       // Element Access
       constexpr T const &operator()(size_t i, size_t j) const { return m_data[i][j]; }
-      T &operator()(size_t i, size_t j) { return m_data[i][j]; }
+      constexpr T &operator()(size_t i, size_t j) { return m_data[i][j]; }
 
     private:
 

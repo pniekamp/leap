@@ -15,6 +15,7 @@
 #ifndef SOCKLIB_HH
 #define SOCKLIB_HH
 
+#include <leap/stringview.h>
 #include <cstdio>
 #include <array>
 #include <string>
@@ -27,10 +28,11 @@
 #    undef socket
 #    undef connect
 #  endif
-#  include <winsock2.h>
+#  include <ws2tcpip.h>
 #else
+#  include <sys/types.h>
 #  include <sys/socket.h>
-#  include <netinet/in.h>
+#  include <netdb.h>
 #  define SOCKET int
 #endif
 
@@ -58,7 +60,7 @@ namespace leap { namespace socklib
     unsigned int bcast;
   };
 
-  typedef sockaddr_in sockaddr_t;
+  typedef sockaddr_in6 sockaddr_t;
 
   ///////////////////// InitialiseSocketSubsystem /////////////////////////////
   bool InitialiseSocketSubsystem();
@@ -134,8 +136,8 @@ namespace leap { namespace socklib
 
       SOCKET m_connectedsocket;
 
-      SocketStatus m_status;
-      unsigned int m_errorcondition;
+      std::atomic<SocketStatus> m_status;
+      std::atomic<unsigned int> m_errorcondition;
 
       threadlib::Semaphore m_activity;
   };
@@ -301,10 +303,10 @@ namespace leap { namespace socklib
   {
     public:
       ClientSocket();
-      explicit ClientSocket(const char *ipaddress, unsigned int port, const char *options = "");
+      explicit ClientSocket(string_view address, string_view service, const char *options = "");
       ~ClientSocket();
 
-      bool create(const char *ipaddress, unsigned int port, const char *options = "");
+      bool create(string_view address, string_view service, const char *options = "");
 
       void destroy();
 
@@ -315,15 +317,14 @@ namespace leap { namespace socklib
     private:
 
       void parse_options(const char *options);
-      bool create_socket();
-      bool connect_socket();
+      bool create_and_connect_socket();
       void close_and_invalidate();
       void handle_created();
       void handle_connected();
       void handle_disconnect();
 
-      unsigned int m_port;
-      std::string m_address;
+      char m_address[256];
+      char m_service[128];
 
       enum { keepalive = 0x04 };
 
@@ -438,13 +439,13 @@ namespace leap { namespace socklib
 
       void broadcast(const void *buffer, size_t bytes, unsigned int ip, int port);
 
-      size_t receive(void *buffer, size_t n, sockaddr_t *addr = NULL);
+      size_t receive(void *buffer, size_t n, sockaddr_in *addr = NULL);
 
     private:
 
       struct packet_t
       {
-        sockaddr_t addr;
+        sockaddr_in addr;
 
         size_t bytes;
 

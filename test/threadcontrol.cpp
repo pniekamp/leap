@@ -69,6 +69,9 @@ static long testthread(void *)
 
   cout << "\n";
 
+  cs.release();
+  mtx.release();
+
   return 0;
 }
 

@@ -32,7 +32,6 @@ namespace leap { namespace regex
     //|///////////////////// RegExContext::Constructor ////////////////////////////
     RegExContext::RegExContext()
     {
-      startofline = nullptr;
     }
 
 
@@ -44,7 +43,7 @@ namespace leap { namespace regex
     RegExState::RegExState(RegExContext *context)
       : context(context)
     {
-      first = last = nullptr;
+      beg = end = nullptr;
 
       count = 0;
 
@@ -89,14 +88,10 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExCommon::consider_first ////////////////////////
-    bool RegExCommon::consider_first(const char *str, RegExState &state) const
+    bool RegExCommon::consider_first(const char *&pos, RegExState &state) const
     {
-      state.first = str;
-      state.last = str-1;
       state.count = 0;
-
-      if (!str)
-        return false;
+      state.beg = state.end = pos;
 
       if (m_repeat == RepeatType::ZeroOrOnce || m_repeat == RepeatType::ZeroOrMore)
       {
@@ -104,12 +99,12 @@ namespace leap { namespace regex
         return true;
       }
 
-      return consider_one(str, state);
+      return consider_one(pos, state);
     }
 
 
     //|///////////////////// RegExCommon::consider_next /////////////////////////
-    bool RegExCommon::consider_next(RegExState &state) const
+    bool RegExCommon::consider_next(const char *&pos, RegExState &state) const
     {
       if (m_repeat == RepeatType::Once)
         return false;
@@ -117,7 +112,7 @@ namespace leap { namespace regex
       if (m_repeat == RepeatType::ZeroOrOnce && state.count == 1)
         return false;
 
-      return consider_one(state.last+1, state);
+      return consider_one(pos, state);
     }
 
 
@@ -127,158 +122,147 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExFilter::Constructor ///////////////////////////
-    RegExFilter::RegExFilter(const char *filter)
+    RegExFilter::RegExFilter(string_view filter)
     {
       m_filter.reset();
 
-      if (filter[0] == '.') // wildcard filter
+      bool compliment = false;
+
+      if (filter[0] == '^')
       {
-        m_filter.set();
+        compliment = true;
+
+        filter.remove_prefix(1);
       }
 
-      else if (filter[0] == '[') // set
+      while (!filter.empty())
       {
-        ++filter;
-
-        bool compliment = false;
-
-        if (*filter == '^')
+        if (filter[0] == '.') // wildcard filter
         {
-          compliment = true;
-          ++filter;
+          m_filter.set();
+
+          filter.remove_prefix(1);
         }
 
-        while (*filter != 0)
+        else if (strncmp(filter.data(), "[:alnum:]", 9) == 0)
         {
-          if (strncmp(filter, "[:alnum:]", 9) == 0)
-          {
-            for(char c = 'a'; c <= 'z'; ++c)
-              m_filter.set(c);
+          for(char c = 'a'; c <= 'z'; ++c)
+            m_filter.set(c);
 
-            for(char c = 'A'; c <= 'Z'; ++c)
-              m_filter.set(c);
+          for(char c = 'A'; c <= 'Z'; ++c)
+            m_filter.set(c);
 
-            for(char c = '0'; c <= '9'; ++c)
-              m_filter.set(c);
+          for(char c = '0'; c <= '9'; ++c)
+            m_filter.set(c);
 
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:alpha:]", 9) == 0)
-          {
-            for(char c = 'a'; c <= 'z'; ++c)
-              m_filter.set(c);
-
-            for(char c = 'A'; c <= 'Z'; ++c)
-              m_filter.set(c);
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:blank:]", 9) == 0)
-          {
-            m_filter.set(' ');
-            m_filter.set('\t');
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:cntrl:]", 9) == 0)
-          {
-            for(char c = 1; c <= 31; ++c)
-              m_filter.set(c);
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:digit:]", 9) == 0)
-          {
-            for(char c = '0'; c <= '9'; ++c)
-              m_filter.set(c);
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:lower:]", 9) == 0)
-          {
-            for(char c = 'a'; c <= 'z'; ++c)
-              m_filter.set(c);
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:space:]", 9) == 0)
-          {
-            m_filter.set(' ');
-            m_filter.set('\t');
-            m_filter.set(0xA);
-            m_filter.set(0xD);
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:upper:]", 9) == 0)
-          {
-            for(char c = 'A'; c <= 'Z'; ++c)
-              m_filter.set(c);
-
-            filter += 9;
-          }
-
-          else if (strncmp(filter, "[:xdigit:]", 10) == 0)
-          {
-            for(char c = 'a'; c <= 'f'; ++c)
-              m_filter.set(c);
-
-            for(char c = 'A'; c <= 'F'; ++c)
-              m_filter.set(c);
-
-            for(char c = '0'; c <= '9'; ++c)
-              m_filter.set(c);
-
-            filter += 10;
-          }
-
-          else if (strncmp(filter, "[:word:]", 8) == 0)
-          {
-            for(char c = 'a'; c <= 'z'; ++c)
-              m_filter.set(c);
-
-            for(char c = 'A'; c <= 'Z'; ++c)
-              m_filter.set(c);
-
-            for(char c = '0'; c <= '9'; ++c)
-              m_filter.set(c);
-
-            m_filter.set('_');
-
-            filter += 8;
-          }
-
-          else
-          {
-            if (*filter == '\\')
-              ++filter;
-
-            m_filter.set(*filter++);
-          }
+          filter.remove_prefix(9);
         }
 
-        if (compliment)
+        else if (strncmp(filter.data(), "[:alpha:]", 9) == 0)
         {
-          m_filter.flip();
+          for(char c = 'a'; c <= 'z'; ++c)
+            m_filter.set(c);
+
+          for(char c = 'A'; c <= 'Z'; ++c)
+            m_filter.set(c);
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:blank:]", 9) == 0)
+        {
+          m_filter.set(' ');
+          m_filter.set('\t');
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:cntrl:]", 9) == 0)
+        {
+          for(char c = 1; c <= 31; ++c)
+            m_filter.set(c);
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:digit:]", 9) == 0)
+        {
+          for(char c = '0'; c <= '9'; ++c)
+            m_filter.set(c);
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:lower:]", 9) == 0)
+        {
+          for(char c = 'a'; c <= 'z'; ++c)
+            m_filter.set(c);
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:space:]", 9) == 0)
+        {
+          m_filter.set(' ');
+          m_filter.set('\t');
+          m_filter.set(0xA);
+          m_filter.set(0xD);
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:upper:]", 9) == 0)
+        {
+          for(char c = 'A'; c <= 'Z'; ++c)
+            m_filter.set(c);
+
+          filter.remove_prefix(9);
+        }
+
+        else if (strncmp(filter.data(), "[:xdigit:]", 10) == 0)
+        {
+          for(char c = 'a'; c <= 'f'; ++c)
+            m_filter.set(c);
+
+          for(char c = 'A'; c <= 'F'; ++c)
+            m_filter.set(c);
+
+          for(char c = '0'; c <= '9'; ++c)
+            m_filter.set(c);
+
+          filter.remove_prefix(10);
+        }
+
+        else if (strncmp(filter.data(), "[:word:]", 8) == 0)
+        {
+          for(char c = 'a'; c <= 'z'; ++c)
+            m_filter.set(c);
+
+          for(char c = 'A'; c <= 'Z'; ++c)
+            m_filter.set(c);
+
+          for(char c = '0'; c <= '9'; ++c)
+            m_filter.set(c);
+
+          m_filter.set('_');
+
+          filter.remove_prefix(8);
+        }
+
+        else
+        {
+          if (filter[0] == '\\')
+            filter.remove_prefix(1);
+
+          m_filter.set(filter[0]);
+
+          filter.remove_prefix(1);
         }
       }
 
-      else
+      if (compliment)
       {
-        for( ; *filter != 0; ++filter)
-        {
-          if (*filter == '\\')
-            ++filter;
-
-          m_filter.set(*filter);
-        }
+        m_filter.flip();
       }
 
       // Never match null
@@ -293,12 +277,16 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExFilter::consider_one //////////////////////////
-    bool RegExFilter::consider_one(const char *str, RegExState &state) const
+    bool RegExFilter::consider_one(const char *&pos, RegExState &state) const
     {
-      if (m_filter.test(*str))
+      if (pos == state.context->str.end())
+        return false;
+
+      if (m_filter.test(pos[0]))
       {
-        state.last = str;
+        ++pos;
         ++state.count;
+        state.end = pos;
 
         return true;
       }
@@ -324,9 +312,9 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExStartOfLine::consider_one //////////////////////
-    bool RegExStartOfLine::consider_one(const char *str, RegExState &state) const
+    bool RegExStartOfLine::consider_one(const char *&pos, RegExState &state) const
     {
-      return (str == state.context->startofline);
+      return (pos == state.context->str.begin());
     }
 
 
@@ -348,9 +336,9 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExEndOfLine::consider_one ////////////////////////
-    bool RegExEndOfLine::consider_one(const char *str, RegExState &state) const
+    bool RegExEndOfLine::consider_one(const char *&pos, RegExState &state) const
     {
-      return (*str == '\0' || *str == '\r' || *str == '\n');
+      return (pos == state.context->str.end() || pos[0] == '\r' || pos[0] == '\n');
     }
 
 
@@ -380,24 +368,26 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExAlternative::consider_first ///////////////////
-    bool RegExAlternative::consider_first(const char *str, RegExState &state) const
+    bool RegExAlternative::consider_first(const char *&pos, RegExState &state) const
     {
-      while (state.substate.size() != 2)
-        state.substate.push_back(RegExState(state.context));
+      state.substate.resize(2, RegExState(state.context));
 
-      state.first = str;
+      state.count = 0;
+      state.beg = state.end = pos;
 
       // Try left first
-      if (m_left->consider_first(str, state.substate[0]))
+      if (m_left->consider_first(pos, state.substate[0]))
       {
-        state.last = state.substate[0].last;
+        state.end = pos;
+
         return true;
       }
 
       // Then right
-      if (m_right->consider_first(str, state.substate[1]))
+      if (m_right->consider_first(pos, state.substate[1]))
       {
-        state.last = state.substate[1].last;
+        state.end = pos;
+
         return true;
       }
 
@@ -406,31 +396,34 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExAlternative::consider_next ////////////////////
-    bool RegExAlternative::consider_next(RegExState &state) const
+    bool RegExAlternative::consider_next(const char *&pos, RegExState &state) const
     {
       if (state.substate[0].count != 0)
       {
-        if (m_left->consider_next(state.substate[0]))
+        if (m_left->consider_next(pos, state.substate[0]))
         {
-          state.last = state.substate[0].last;
+          state.end = pos;
+
           return true;
         }
 
         state.substate[0].count = 0;
 
         // Done with the left, try the right
-        if (m_right->consider_first(state.first, state.substate[1]))
+        if (m_right->consider_first(pos, state.substate[1]))
         {
-          state.last = state.substate[1].last;
+          state.end = pos;
+
           return true;
         }
       }
 
       if (state.substate[1].count != 0)
       {
-        if (m_right->consider_next(state.substate[1]))
+        if (m_right->consider_next(pos, state.substate[1]))
         {
-          state.last = state.substate[1].last;
+          state.end = pos;
+
           return true;
         }
       }
@@ -444,14 +437,15 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExGroup::Constructor ////////////////////////////
-    RegExGroup::RegExGroup(const char *group)
+    RegExGroup::RegExGroup(string_view group)
     {
       m_capture = true;
 
       if (group[0] == '?' && group[1] == ':')
       {
-        group += 2;
         m_capture = false;
+
+        group.remove_prefix(2);
       }
 
       define(group);
@@ -465,11 +459,11 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExGroup::consider_first /////////////////////////
-    bool RegExGroup::consider_first(const char *str, RegExState &state) const
+    bool RegExGroup::consider_first(const char *&pos, RegExState &state) const
     {
       state.capture = m_capture;
 
-      return RegExCore::consider_first(str, state);
+      return RegExCore::consider_first(pos, state);
     }
 
 
@@ -490,42 +484,47 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExCore::define //////////////////////////////////
-    void RegExCore::define(const char *str)
+    void RegExCore::define(string_view str)
     {
       m_conditions.clear();
 
       //
       // Parse the regular expression into condition objects
       //
-      while (*str != 0)
+
+      while (!str.empty())
       {
-        if (*str == '.') // wildcard filter object
+        if (str[0] == '.') // wildcard filter object
         {
           m_conditions.push_back(make_unique<RegExFilter>("."));
+
+          str.remove_prefix(1);
         }
 
-        else if (*str == '?' || *str == '*' || *str == '+')
+        else if (str[0] == '?' || str[0] == '*' || str[0] == '+')
         {
           if (m_conditions.size() == 0)
             return;
 
-          if (*str == '?') // repeat last zero or once
+          if (str[0] == '?') // repeat last zero or once
           {
             m_conditions.back()->set_repeat(RepeatType::ZeroOrOnce);
           }
 
-          if (*str == '*') // repeat last zero or more
+          if (str[0] == '*') // repeat last zero or more
           {
             m_conditions.back()->set_repeat(RepeatType::ZeroOrMore);
           }
 
-          if (*str == '+') // repeat last one or more
+          if (str[0] == '+') // repeat last one or more
           {
             m_conditions.back()->set_repeat(RepeatType::OneOrMore);
           }
+
+          str.remove_prefix(1);
         }
 
-        else if (*str == '|') // Alternative
+        else if (str[0] == '|') // Alternative
         {
           auto left = make_unique<RegExCore>();
           auto right = make_unique<RegExCore>();
@@ -534,101 +533,103 @@ namespace leap { namespace regex
           left->m_conditions = std::move(m_conditions);
 
           // All the rest goes on the right
-          right->define(str+1);
+          right->define(str.substr(1));
 
           m_conditions.clear();
           m_conditions.push_back(make_unique<RegExAlternative>(std::move(left), std::move(right)));
 
-          break;
+          str.remove_prefix(str.size());
         }
 
-        else if (*str == '(') // Group
+        else if (str[0] == '(') // Group
         {
-          string group;
+          unsigned int count = 1;
           unsigned int indent = 1;
 
-          for( ; str[1] != 0 && indent > 0; ++str)
+          for( ; count < str.size() && indent > 0; ++count)
           {
-            if (str[1] == '(')
+            if (str[count] == '(')
               ++indent;
 
-            if (str[1] == ')')
+            if (str[count] == ')')
               --indent;
-
-            group += *str;
           }
 
-          m_conditions.push_back(make_unique<RegExGroup>(group.c_str()+1));
+          m_conditions.push_back(make_unique<RegExGroup>(str.substr(1, count-2)));
+
+          str.remove_prefix(count);
         }
 
-        else if (*str == '[') // set
+        else if (str[0] == '[') // set
         {
-          string set;
+          unsigned int count = 1;
           unsigned int indent = 1;
 
-          for( ; str[1] != 0 && indent > 0; ++str)
+          for( ; count < str.size() && indent > 0; ++count)
           {
-            if (str[1] == '[')
+            if (str[count] == '[')
               ++indent;
 
-            if (str[1] == ']')
+            if (str[count] == ']')
               --indent;
-
-            set += *str;
           }
 
-          m_conditions.push_back(make_unique<RegExFilter>(set.c_str()));
+          m_conditions.push_back(make_unique<RegExFilter>(str.substr(1, count-2)));
+
+          str.remove_prefix(count);
         }
 
-
-        else if (*str == '^') // Start Of Line Placeholder
+        else if (str[0] == '^') // Start Of Line Placeholder
         {
           m_conditions.push_back(make_unique<RegExStartOfLine>());
+
+          str.remove_prefix(1);
         }
 
-        else if (*str == '$') // End Of Line Placeholder
+        else if (str[0] == '$') // End Of Line Placeholder
         {
           m_conditions.push_back(make_unique<RegExEndOfLine>());
+
+          str.remove_prefix(1);
         }
 
-        else if (*str == '\\') // Escaped Character
+        else if (str[0] == '\\') // Escaped Character
         {
-          char ch[3] = { *str, *++str, 0 };
-          m_conditions.push_back(make_unique<RegExFilter>(ch));
+          m_conditions.push_back(make_unique<RegExFilter>(str.substr(0, 2)));
+
+          str.remove_prefix(2);
         }
 
         else
         {
           // Any Other Character goes as is
-          char ch[2] = { *str, 0 };
-          m_conditions.push_back(make_unique<RegExFilter>(ch));
-        }
+          m_conditions.push_back(make_unique<RegExFilter>(str.substr(0, 1)));
 
-        ++str;
+          str.remove_prefix(1);
+        }
       }
     }
 
 
     //|///////////////////// RegExCore::consider_one ////////////////////////////
-    bool RegExCore::consider_one(const char *str, RegExState &state) const
+    bool RegExCore::consider_one(const char *&pos, RegExState &state) const
     {
       if (m_conditions.size() == 0)
         return true;
 
-      const char *cs = str;
+      const char *cursor = pos;
+
       size_t c = 0;
       size_t n = m_conditions.size();
 
-      while (state.substate.size() != n)
-        state.substate.push_back(RegExState(state.context));
+      state.substate.resize(n, RegExState(state.context));
 
       // Jitter until all match or fail.
       do
       {
-        if (m_conditions[c]->consider_first(cs, state.substate[c]))
+        if (m_conditions[c]->consider_first(cursor, state.substate[c]))
         {
           // Match, move on to next condition
-          cs = state.substate[c].last + 1;
           ++c;
         }
         else
@@ -636,11 +637,11 @@ namespace leap { namespace regex
           // No Match, move back and expand
           while (c > 0)
           {
-            --c;
-            if (m_conditions[c]->consider_next(state.substate[c]))
+            cursor = state.substate[--c].end;
+
+            if (m_conditions[c]->consider_next(cursor, state.substate[c]))
             {
               // Successful expand, try next condition again
-              cs = state.substate[c].last + 1;
               ++c;
 
               break;
@@ -652,8 +653,9 @@ namespace leap { namespace regex
 
       if (c != 0 && (c % n) == 0)
       {
-        state.last = state.substate[c-1].last;
+        pos = cursor;
         ++state.count;
+        state.end = pos;
 
         return true;
       }
@@ -663,30 +665,29 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExCore::consider_next ///////////////////////////
-    bool RegExCore::consider_next(RegExState &state) const
+    bool RegExCore::consider_next(const char *&pos, RegExState &state) const
     {
       if (m_conditions.size() == 0)
         return false;
 
-      const char *cs = state.last+1;
+      const char *cursor = pos;
+
       size_t c = state.count * m_conditions.size();
       size_t n = m_conditions.size();
 
       // Repeat not allowed or last instance used up no characters (don't repeat nulls infinetly)
       if (m_repeat != RepeatType::Once && (m_repeat != RepeatType::ZeroOrOnce || state.count == 0)
-          && (state.count == 0 || state.substate[state.substate.size()-n].first <= state.substate.back().last))
+          && (state.count == 0 || state.substate[state.substate.size()-n].beg <= state.substate.back().end))
       {
-        while (state.substate.size() < (state.count+1)*m_conditions.size())
-          state.substate.push_back(RegExState(state.context));
+        state.substate.resize((state.count+1)*m_conditions.size(), RegExState(state.context));
       }
 
       // Jitter until all match or fail.
       do
       {
-        if (c < state.substate.size() && m_conditions[c % n]->consider_first(cs, state.substate[c]))
+        if (c < state.substate.size() && m_conditions[c % n]->consider_first(cursor, state.substate[c]))
         {
           // Match, move on to next condition
-          cs = state.substate[c].last + 1;
           ++c;
         }
         else
@@ -694,11 +695,11 @@ namespace leap { namespace regex
           // No Match, move back and expand
           while (c > 0)
           {
-            --c;
-            if (m_conditions[c % n]->consider_next(state.substate[c]))
+            cursor = state.substate[--c].end;
+
+            if (m_conditions[c % n]->consider_next(cursor, state.substate[c]))
             {
               // Successful expand, try next condition again
-              cs = state.substate[c].last + 1;
               ++c;
 
               break;
@@ -711,8 +712,9 @@ namespace leap { namespace regex
 
       if (c != 0 && (c % n) == 0)
       {
-        state.last = state.substate[c-1].last;
+        pos = cursor;
         state.count = c / n;
+        state.end = pos;
 
         return true;
       }
@@ -742,8 +744,22 @@ namespace leap { namespace regex
   }
 
 
+  //|///////////////////// RegEx::Constructor /////////////////////////////////
+  RegEx::RegEx(string const &str)
+  {
+    prepare(str);
+  }
+
+
+  //|///////////////////// RegEx::Constructor /////////////////////////////////
+  RegEx::RegEx(string_view str)
+  {
+    prepare(str);
+  }
+
+
   //|///////////////////// RegEx::prepare /////////////////////////////////////
-  void RegEx::prepare(const char *str)
+  void RegEx::prepare(string_view str)
   {
     m_regex.define(str);
   }
@@ -752,10 +768,11 @@ namespace leap { namespace regex
 
   //|--------------------- CaptureVisitor -------------------------------------
   //|--------------------------------------------------------------------------
+
   class CaptureVisitor : public RegExImpl::RegExStateVisitor
   {
     public:
-      CaptureVisitor(vector<string> *groups)
+      CaptureVisitor(vector<string_view> *groups)
       {
         m_groups = groups;
       }
@@ -764,26 +781,29 @@ namespace leap { namespace regex
       {
         if (state.capture == true && state.count != 0)
         {
-          m_groups->push_back(string(state.first, state.last+1));
+          m_groups->push_back(string_view(state.beg, state.end - state.beg));
         }
       }
 
-      vector<string> *m_groups;
+      vector<string_view> *m_groups;
   };
 
 
 
   //|--------------------- match ----------------------------------------------
   //|--------------------------------------------------------------------------
-  bool match(RegEx const &rex, const char *str, vector<string> *groups)
+
+  bool match(RegEx const &rex, string_view str, vector<string_view> *groups)
   {
     RegExImpl::RegExContext context;
 
-    context.startofline = str;
+    context.str = str;
 
     RegExImpl::RegExState state(&context);
 
-    if (rex.m_regex.consider_first(str, state))
+    auto pos = str.begin();
+
+    if (rex.m_regex.consider_first(pos, state))
     {
       if (groups)
       {
@@ -803,17 +823,18 @@ namespace leap { namespace regex
 
   //|--------------------- search ---------------------------------------------
   //|--------------------------------------------------------------------------
-  bool search(RegEx const &rex, const char *str, vector<string> *groups)
+
+  bool search(RegEx const &rex, string_view str, vector<string_view> *groups)
   {
     RegExImpl::RegExContext context;
 
-    context.startofline = str;
+    context.str = str;
 
-    while (*str != 0)
+    for(auto pos = str.begin(); pos != str.end(); ++pos)
     {
       RegExImpl::RegExState state(&context);
 
-      if (rex.m_regex.consider_first(str, state))
+      if (rex.m_regex.consider_first(pos, state))
       {
         if (groups)
         {
@@ -826,8 +847,6 @@ namespace leap { namespace regex
 
         return true;
       }
-
-      ++str;
     }
 
     return false;
