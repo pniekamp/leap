@@ -122,7 +122,7 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExFilter::Constructor ///////////////////////////
-    RegExFilter::RegExFilter(string_view filter)
+    RegExFilter::RegExFilter(leap::string_view filter)
     {
       m_filter.reset();
 
@@ -437,7 +437,7 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExGroup::Constructor ////////////////////////////
-    RegExGroup::RegExGroup(string_view group)
+    RegExGroup::RegExGroup(leap::string_view group)
     {
       m_capture = true;
 
@@ -484,7 +484,7 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExCore::define //////////////////////////////////
-    void RegExCore::define(string_view str)
+    void RegExCore::define(leap::string_view str)
     {
       m_conditions.clear();
 
@@ -752,14 +752,14 @@ namespace leap { namespace regex
 
 
   //|///////////////////// RegEx::Constructor /////////////////////////////////
-  RegEx::RegEx(string_view str)
+  RegEx::RegEx(leap::string_view str)
   {
     prepare(str);
   }
 
 
   //|///////////////////// RegEx::prepare /////////////////////////////////////
-  void RegEx::prepare(string_view str)
+  void RegEx::prepare(leap::string_view str)
   {
     m_regex.define(str);
   }
@@ -772,7 +772,7 @@ namespace leap { namespace regex
   class CaptureVisitor : public RegExImpl::RegExStateVisitor
   {
     public:
-      CaptureVisitor(vector<string_view> *groups)
+      CaptureVisitor(vector<leap::string_view> *groups)
       {
         m_groups = groups;
       }
@@ -781,11 +781,11 @@ namespace leap { namespace regex
       {
         if (state.capture == true && state.count != 0)
         {
-          m_groups->push_back(string_view(state.beg, state.end - state.beg));
+          m_groups->push_back(leap::string_view(state.beg, state.end - state.beg));
         }
       }
 
-      vector<string_view> *m_groups;
+      vector<leap::string_view> *m_groups;
   };
 
 
@@ -793,7 +793,7 @@ namespace leap { namespace regex
   //|--------------------- match ----------------------------------------------
   //|--------------------------------------------------------------------------
 
-  bool match(RegEx const &rex, string_view str, vector<string_view> *groups)
+  bool match(RegEx const &rex, leap::string_view str, vector<leap::string_view> *groups)
   {
     RegExImpl::RegExContext context;
 
@@ -824,7 +824,7 @@ namespace leap { namespace regex
   //|--------------------- search ---------------------------------------------
   //|--------------------------------------------------------------------------
 
-  bool search(RegEx const &rex, string_view str, vector<string_view> *groups)
+  bool search(RegEx const &rex, leap::string_view str, vector<leap::string_view> *groups)
   {
     RegExImpl::RegExContext context;
 

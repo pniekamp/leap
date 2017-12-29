@@ -1100,7 +1100,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// ClientSocket::Constructor ////////////////////////
-  ClientSocket::ClientSocket(string_view address, string_view service, const char *options)
+  ClientSocket::ClientSocket(leap::string_view address, leap::string_view service, const char *options)
     : ClientSocket()
   {
     create(address, service, options);
@@ -1141,7 +1141,7 @@ namespace leap { namespace socklib
   /// \param[in] port The port number on which to connect
   /// \param[in] options Options string
   ///
-  bool ClientSocket::create(string_view address, string_view service, const char *options)
+  bool ClientSocket::create(leap::string_view address, leap::string_view service, const char *options)
   {
     assert(m_status == SocketStatus::Unborn || m_status == SocketStatus::Dead);
 

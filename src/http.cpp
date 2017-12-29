@@ -205,7 +205,7 @@ namespace
     if (!readline(socket, line, sizeof(line)))
       return false;
 
-    vector<string_view> fields = split(line);
+    auto fields = split(line);
 
     if (fields.size() != 3 || (fields[2] != "HTTP/1.0" && fields[2] != "HTTP/1.1"))
       throw SocketBase::socket_error("Invalid HTTP Header");
@@ -470,7 +470,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPBase::header /////////////////////////////////
-  string const &HTTPBase::header(string_view name) const
+  string const &HTTPBase::header(leap::string_view name) const
   {
     static string nullstr;
 
@@ -502,18 +502,18 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPBase::add_header /////////////////////////////
-  void HTTPBase::add_header(string_view header)
+  void HTTPBase::add_header(leap::string_view header)
   {
     auto div = header.find_first_of(':');
 
-    if (div != string_view::npos)
+    if (div != leap::string_view::npos)
     {
       auto name = header.substr(0, div);
 
       while (header[div+1] == ' ')
         ++div;
 
-      auto value = header.substr(div+1, string_view::npos);
+      auto value = header.substr(div+1, leap::string_view::npos);
 
       add_header(name.to_string(), value.to_string());
     }
@@ -528,7 +528,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPBase::add_payload ////////////////////////////
-  void HTTPBase::add_payload(string_view buffer)
+  void HTTPBase::add_payload(leap::string_view buffer)
   {
     add_payload(buffer.data(), buffer.size());
   }
@@ -572,15 +572,15 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPRequest::Constructor /////////////////////////
-  HTTPRequest::HTTPRequest(string method, string_view url, string_view payload)
+  HTTPRequest::HTTPRequest(string method, leap::string_view url, leap::string_view payload)
   {
-    vector<string_view> groups;
+    vector<leap::string_view> groups;
 
     regex::match("^(.+://|)(.+)(:.+|)(/.*|)$", url, &groups);
 
-    string_view address = (groups.size() < 1 || groups[1].empty()) ? "localhost" : groups[1];
-    string_view service = (groups.size() < 2 || groups[2].empty()) ? "80" : groups[2].substr(1);
-    string_view location = (groups.size() < 3 || groups[3].empty()) ? "/index.html" : groups[3];
+    leap::string_view address = (groups.size() < 1 || groups[1].empty()) ? "localhost" : groups[1];
+    leap::string_view service = (groups.size() < 2 || groups[2].empty()) ? "80" : groups[2].substr(1);
+    leap::string_view location = (groups.size() < 3 || groups[3].empty()) ? "/index.html" : groups[3];
 
     m_server = address.to_string();
     m_service = service.to_string();
@@ -593,7 +593,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPRequest::Constructor /////////////////////////
-  HTTPRequest::HTTPRequest(string method, string server, string service, string location, string_view payload)
+  HTTPRequest::HTTPRequest(string method, string server, string service, string location, leap::string_view payload)
     : m_server(std::move(server)), m_service(std::move(service))
   {
     m_method = std::move(method);
@@ -660,7 +660,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPResponse::Constructor ////////////////////////
-  HTTPResponse::HTTPResponse(string_view payload, string contenttype)
+  HTTPResponse::HTTPResponse(leap::string_view payload, string contenttype)
   {
     set_status(200);
     set_statustxt("OK");
@@ -710,7 +710,7 @@ namespace leap { namespace socklib
 
       struct Connection
       {
-        Connection(string_view server, string_view service)
+        Connection(leap::string_view server, leap::string_view service)
           : server(server.data(), server.size()),
             service(service.data(), service.size())
         {
@@ -934,7 +934,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// WebSocketMessage::Constructor ////////////////////
-  WebSocketMessage::WebSocketMessage(string_view payload)
+  WebSocketMessage::WebSocketMessage(leap::string_view payload)
   {
     m_type = MessageType::Text;
 
@@ -964,7 +964,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// WebSocketMessage::add_payload ////////////////////
-  void WebSocketMessage::add_payload(string_view buffer)
+  void WebSocketMessage::add_payload(leap::string_view buffer)
   {
     add_payload(buffer.data(), buffer.size());
   }
@@ -1035,12 +1035,12 @@ namespace leap { namespace socklib
     m_url = std::move(url);
     m_protocols = std::move(protocols);
 
-    vector<string_view> groups;
+    vector<leap::string_view> groups;
 
     regex::match("^(.+://)(.+)(:.+|)(/.*)$", m_url, &groups);
 
-    string_view address = (groups.size() < 1 || groups[1].empty()) ? "localhost" : groups[1];
-    string_view service = (groups.size() < 2 || groups[2].empty()) ? "80" : groups[2].substr(1);
+    leap::string_view address = (groups.size() < 1 || groups[1].empty()) ? "localhost" : groups[1];
+    leap::string_view service = (groups.size() < 2 || groups[2].empty()) ? "80" : groups[2].substr(1);
 
     m_socket.create(address, service);
 
@@ -1366,7 +1366,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPServer::broadcast ////////////////////////////
-  void HTTPServer::broadcast(string_view endpoint, WebSocketMessage const &message, socket_t ignore)
+  void HTTPServer::broadcast(leap::string_view endpoint, WebSocketMessage const &message, socket_t ignore)
   {
     SyncLock M(m_mutex);
 
@@ -1623,7 +1623,7 @@ namespace leap { namespace socklib
 
 
   //////////////////////////// base64_decode ////////////////////////////////
-  vector<uint8_t> base64_decode(string_view payload)
+  vector<uint8_t> base64_decode(leap::string_view payload)
   {
     static const char decode[] = "|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
 
