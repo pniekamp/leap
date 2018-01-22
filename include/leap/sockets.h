@@ -150,7 +150,7 @@ namespace leap { namespace socklib
    *
    * The Sockets class implements a TCP/IP sockets based transport. Sockets
    * can be used for communication between processes on the same machine or
-   * accross a network to another machine. The specific application is defined
+   * across a network to another machine. The specific application is defined
    * via the use of a port.
    *
    * The Server Socket is always created on the local machine and will bind to
@@ -159,7 +159,7 @@ namespace leap { namespace socklib
    * The Client Socket will connect to an existing Server Socket defined by a
    * Machine Name (IP Address) and a destination port number.
    *
-   * An extention to the Server Socket is the Socket Pump. This binds to the
+   * An extension to the Server Socket is the Socket Pump. This binds to the
    * Server Port (on the local machine) and waits for client connections. Once
    * a client connects, the corresponding Server Socket instance is passed out,
    * and the pump returns to waiting for a client connection. Hence, multiple
@@ -168,7 +168,7 @@ namespace leap { namespace socklib
    *
    * Operations on sockets occur in a semi-nonblocking mode. Outgoing data
    * transmits into the TCP Stack and will not block unless the Stack is full.
-   * Incomming data is received by a thread of the socket class and placed
+   * Incoming data is received by a thread of the socket class and placed
    * into the internal read buffer. While the receive operations in the thread
    * may block, operations on the read buffer are nonblocking.
    *
@@ -180,10 +180,10 @@ namespace leap { namespace socklib
    * a new connection.
    *
    * To reduce polling of the socket to receive data, the Wait Functions should
-   * be used. Typically, WaitOnBytes will effeciently wait until either a timeout
+   * be used. Typically, WaitOnBytes will efficiently wait until either a timeout
    * occurs or a specified number of bytes are available on the socket.
    *
-   * Link agains WS2_32.lib on windows
+   * Link against WS2_32.lib on windows
    *
   **/
 

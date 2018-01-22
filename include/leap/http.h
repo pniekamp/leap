@@ -35,13 +35,13 @@
 namespace leap { namespace socklib
 {
 
-  //-------------------------- HTTPBase ---------------------------------------
+  //-------------------------- HTTPMessage ------------------------------------
   //---------------------------------------------------------------------------
 
-  class HTTPBase
+  class HTTPMessage
   {
     public:
-      HTTPBase();
+      HTTPMessage();
 
       int status() const { return m_status; }
 
@@ -85,7 +85,7 @@ namespace leap { namespace socklib
    *
   **/
 
-  class HTTPRequest : public HTTPBase
+  class HTTPRequest : public HTTPMessage
   {
     public:
       explicit HTTPRequest(int status = 408);
@@ -124,7 +124,7 @@ namespace leap { namespace socklib
    *
   **/
 
-  class HTTPResponse : public HTTPBase
+  class HTTPResponse : public HTTPMessage
   {
     public:
       explicit HTTPResponse(int status = 200, std::string statustxt = "OK");
@@ -161,7 +161,7 @@ namespace leap { namespace socklib
 
       class ConnectionPool;
 
-      static bool perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, std::function<size_t (StreamSocket &socket, size_t bytes, HTTPBase *msg)> const &callback);
+      static bool perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, std::function<size_t (StreamSocket &socket, size_t bytes, HTTPMessage *msg)> const &callback);
   };
 
 

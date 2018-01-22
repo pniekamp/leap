@@ -377,6 +377,27 @@ namespace leap { namespace socklib
     return (::select(max(readfd, writefd)+1, &readfds, &writefds, 0, &t) != 0);
   }
 
+  //|///////////////////// setacceptall /////////////////////////////////////
+  static void setacceptall(SOCKET socket)
+  {
+    int zero = 0;
+    setsockopt(socket, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&zero, sizeof(zero));
+  }
+
+  //|///////////////////// setreuseaddr /////////////////////////////////////
+  static void setreuseaddr(SOCKET socket)
+  {
+    int one = 1;
+    setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
+  }
+
+  //|///////////////////// setkeepalive /////////////////////////////////////
+  static void setkeepalive(SOCKET socket)
+  {
+    int one = 1;
+    setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, (const char *)&one, sizeof(one));
+  }
+
   //|///////////////////// setnonblocking ///////////////////////////////////
   static void setnonblocking(SOCKET socket)
   {
@@ -715,7 +736,7 @@ namespace leap { namespace socklib
       return StreamState::Dead;
     }
 
-    // or an error occured...
+    // or an error occurred...
     else if (bytes == SOCKET_ERROR)
     {
       auto result = GetLastError();
@@ -941,13 +962,9 @@ namespace leap { namespace socklib
       return false;
     }
 
+    setreuseaddr(m_listeningsocket);
+    setacceptall(m_listeningsocket);
     setnonblocking(m_listeningsocket);
-
-    int zero = 0;
-    setsockopt(m_listeningsocket, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&zero, sizeof(zero));
-
-    int one = 1;
-    setsockopt(m_listeningsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
 
     //
     // Bind the listening socket to the port number
@@ -1024,8 +1041,7 @@ namespace leap { namespace socklib
 
       if ((m_options & KeepAlive) != 0)
       {
-        int one = 1;
-        setsockopt(m_connectedsocket, SOL_SOCKET, SO_KEEPALIVE, (const char *)&one, sizeof(one));
+        setkeepalive(m_connectedsocket);
       }
 
       init_stream();
@@ -1269,8 +1285,7 @@ namespace leap { namespace socklib
         // keepalive option
         if ((m_options & keepalive) != 0)
         {
-          int one = 1;
-          setsockopt(m_connectedsocket, SOL_SOCKET, SO_KEEPALIVE, (const char *)&one, sizeof(one));
+          setkeepalive(m_connectedsocket);
         }
       }
     }
@@ -1473,13 +1488,9 @@ namespace leap { namespace socklib
       return false;
     }
 
+    setreuseaddr(m_listeningsocket);
+    setacceptall(m_listeningsocket);
     setnonblocking(m_listeningsocket);
-
-    int one = 1;
-    setsockopt(m_listeningsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
-
-    int zero = 0;
-    setsockopt(m_listeningsocket, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&zero, sizeof(zero));
 
     //
     // Bind the listening socket to the port number
@@ -1818,10 +1829,10 @@ namespace leap { namespace socklib
       return false;
     }
 
+    setreuseaddr(m_connectedsocket);
     setnonblocking(m_connectedsocket);
 
     int one = 1;
-    setsockopt(m_connectedsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
     setsockopt(m_connectedsocket, SOL_SOCKET, SO_BROADCAST, (const char *)&one, sizeof(one));
 
     //
@@ -1875,7 +1886,7 @@ namespace leap { namespace socklib
 
     ssize_t bytes = recvfrom(m_connectedsocket, (char*)buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrlen);
 
-    // an error occured...
+    // an error occurred...
     if (bytes == SOCKET_ERROR)
     {
       auto result = GetLastError();

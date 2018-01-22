@@ -45,8 +45,8 @@ namespace
   {
     int step = 0;
 
-    function<size_t (StreamSocket &socket, size_t bytes, HTTPBase *msg)> callback =
-      [](StreamSocket &socket, size_t bytes, HTTPBase *msg) {
+    function<size_t (StreamSocket &socket, size_t bytes, HTTPMessage *msg)> callback =
+      [](StreamSocket &socket, size_t bytes, HTTPMessage *msg) {
         char *buffer = msg->reserve_payload(bytes);
 
         socket.receive(buffer, bytes);
@@ -89,7 +89,7 @@ namespace
 
 
   //|///////////////////// read_http_base ///////////////////////////////////
-  bool read_http_base(read_http_state &state, StreamSocket &socket, HTTPBase *msg)
+  bool read_http_base(read_http_state &state, StreamSocket &socket, HTTPMessage *msg)
   {
     char line[4096];
 
@@ -132,7 +132,7 @@ namespace
         state.step = 4;
 
         [[fallthrough]];
-        
+
       case 4:
 
         // Start Read Chunk
@@ -458,19 +458,19 @@ namespace
 namespace leap { namespace socklib
 {
 
-  //|--------------------- HTTPBase -----------------------------------------
+  //|--------------------- HTTPMessage --------------------------------------
   //|------------------------------------------------------------------------
 
 
-  //|///////////////////// HTTPBase::Constructor ////////////////////////////
-  HTTPBase::HTTPBase()
+  //|///////////////////// HTTPMessage::Constructor /////////////////////////
+  HTTPMessage::HTTPMessage()
   {
     m_status = 408;
   }
 
 
-  //|///////////////////// HTTPBase::header /////////////////////////////////
-  string const &HTTPBase::header(leap::string_view name) const
+  //|///////////////////// HTTPMessage::header //////////////////////////////
+  string const &HTTPMessage::header(leap::string_view name) const
   {
     static string nullstr;
 
@@ -483,8 +483,8 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// HTTPBase::clear //////////////////////////////////
-  void HTTPBase::clear()
+  //|///////////////////// HTTPMessage::clear ///////////////////////////////
+  void HTTPMessage::clear()
   {
     m_status = 408;
 
@@ -494,15 +494,15 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// HTTPBase::set_status /////////////////////////////
-  void HTTPBase::set_status(int status)
+  //|///////////////////// HTTPMessage::set_status //////////////////////////
+  void HTTPMessage::set_status(int status)
   {
     m_status = status;
   }
 
 
   //|///////////////////// HTTPBase::add_header /////////////////////////////
-  void HTTPBase::add_header(leap::string_view header)
+  void HTTPMessage::add_header(leap::string_view header)
   {
     auto div = header.find_first_of(':');
 
@@ -520,30 +520,30 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// HTTPBase::add_header /////////////////////////////
-  void HTTPBase::add_header(string name, string value)
+  //|///////////////////// HTTPMessage::add_header //////////////////////////
+  void HTTPMessage::add_header(string name, string value)
   {
     m_header.emplace(std::move(name), std::move(value));
   }
 
 
-  //|///////////////////// HTTPBase::add_payload ////////////////////////////
-  void HTTPBase::add_payload(leap::string_view buffer)
+  //|///////////////////// HTTPMessage::add_payload /////////////////////////
+  void HTTPMessage::add_payload(leap::string_view buffer)
   {
     add_payload(buffer.data(), buffer.size());
   }
 
 
-  //|///////////////////// HTTPBase::add_payload ////////////////////////////
-  void HTTPBase::add_payload(const char *buffer, size_t bytes)
+  //|///////////////////// HTTPMessage::add_payload /////////////////////////
+  void HTTPMessage::add_payload(const char *buffer, size_t bytes)
   {
     m_payload.reserve(m_payload.size() + bytes);
     m_payload.insert(m_payload.end(), buffer, buffer+bytes);
   }
 
 
-  //|///////////////////// HTTPBase::reserve_payload ////////////////////////
-  char *HTTPBase::reserve_payload(size_t bytes)
+  //|///////////////////// HTTPMessage::reserve_payload /////////////////////
+  char *HTTPMessage::reserve_payload(size_t bytes)
   {
     m_payload.resize(m_payload.size() + bytes);
 
@@ -551,8 +551,8 @@ namespace leap { namespace socklib
   }
 
 
-  //|///////////////////// HTTPBase::release_payload ////////////////////////
-  char *HTTPBase::release_payload(size_t bytes)
+  //|///////////////////// HTTPMessage::release_payload /////////////////////
+  char *HTTPMessage::release_payload(size_t bytes)
   {
     m_payload.resize(m_payload.size() - bytes);
 
@@ -609,7 +609,7 @@ namespace leap { namespace socklib
     m_method = "";
     m_location = "";
 
-    HTTPBase::clear();
+    HTTPMessage::clear();
   }
 
 
@@ -810,7 +810,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// HTTPClient::perform //////////////////////////////
-  bool HTTPClient::perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, function<size_t (StreamSocket &socket, size_t bytes, HTTPBase *msg)> const &callback)
+  bool HTTPClient::perform(HTTPRequest const &request, HTTPResponse *response, leap::threadlib::Waitable *cancel, int timeout, function<size_t (StreamSocket &socket, size_t bytes, HTTPMessage *msg)> const &callback)
   {
     response->clear();
 
@@ -905,7 +905,7 @@ namespace leap { namespace socklib
   {
     HTTPResponse response;
 
-    auto callback = [&](StreamSocket &socket, size_t bytes, HTTPBase *msg) {
+    auto callback = [&](StreamSocket &socket, size_t bytes, HTTPMessage *msg) {
       char buffer[4096];
 
       size_t n = min(bytes, sizeof(buffer));
@@ -1007,7 +1007,7 @@ namespace leap { namespace socklib
     m_state = SocketState::Unborn;
 
     m_onconnect = []() { };
-    m_onmessage= [](WebSocketMessage const &) { };
+    m_onmessage = [](WebSocketMessage const &) { };
     m_ondisconnect = []() { };
   }
 
@@ -1320,9 +1320,9 @@ namespace leap { namespace socklib
       ifstream fin(path, ios_base::in | ios_base::binary);
       if (!fin)
       {
-        sprintf(buffer, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
+        auto bytes = sprintf(buffer, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
 
-        connection->socket.transmit(buffer, strlen(buffer));
+        connection->socket.transmit(buffer, bytes);
 
         return false;
       }
@@ -1331,9 +1331,9 @@ namespace leap { namespace socklib
       size_t contentlength = fin.tellg();
       fin.seekg(0, std::ios_base::beg);
 
-      sprintf(buffer, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\n\r\n", contenttype, contentlength);
+      auto bytes = sprintf(buffer, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\n\r\n", contenttype, contentlength);
 
-      connection->socket.transmit(buffer, strlen(buffer));
+      connection->socket.transmit(buffer, bytes);
 
       while (auto bytes = fin.readsome(buffer, sizeof(buffer)))
       {
