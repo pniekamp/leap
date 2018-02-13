@@ -2,9 +2,10 @@ language: cpp
 
 matrix:
   include:
-    # Clang 4.0
-    - env: COMPILER=clang++-4.0 CMAKE_OPTIONS=""
-      addons: { apt: { packages: ["g++-4", "clang-4.0"], sources: ["ubuntu-toolchain-r-test", "llvm-toolchain-trusty-4.0"] } }
+
+    # GCC 5
+    - env: COMPILER=g++-5 CMAKE_OPTIONS=""
+      addons: { apt: { packages: ["g++-5"], sources: ["ubuntu-toolchain-r-test"] } }
 
     # Clang 5.0
     - env: COMPILER=clang++-5.0 CMAKE_OPTIONS=""
