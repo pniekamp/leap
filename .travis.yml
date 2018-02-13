@@ -3,10 +3,11 @@ language: cpp
 matrix:
   include:
     # Clang 3.5
-    - env: CC=clang-3.9 CXX=clang++-3.9
+    - env: COMPILER=clang++-3.9
       addons: { apt: { packages: ["clang-3.9"], sources: ["llvm-toolchain-trusty-3.9"] } }
 
 before_script:
+  - export CCX=${COMPILER}
   - mkdir build
   - cd build
   - cmake ..
