@@ -1,6 +1,4 @@
 language: cpp
-os: linux
-dist: precise
 
 matrix:
   include:
