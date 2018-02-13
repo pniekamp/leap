@@ -7,6 +7,14 @@ matrix:
     - env: COMPILER=g++-5 CMAKE_OPTIONS=""
       addons: { apt: { packages: ["g++-5"], sources: ["ubuntu-toolchain-r-test"] } }
 
+    # GCC 6
+    - env: COMPILER=g++-6 CMAKE_OPTIONS=""
+      addons: { apt: { packages: ["g++-6"], sources: ["ubuntu-toolchain-r-test"] } }
+
+    # GCC 7
+    - env: COMPILER=g++-7 CMAKE_OPTIONS=""
+      addons: { apt: { packages: ["g++-7"], sources: ["ubuntu-toolchain-r-test"] } }
+
     # Clang 5.0
     - env: COMPILER=clang++-5.0 CMAKE_OPTIONS=""
       addons: { apt: { packages: ["g++-5", "clang-5.0"], sources: ["ubuntu-toolchain-r-test", "llvm-toolchain-trusty-5.0"] } }
