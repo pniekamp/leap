@@ -71,21 +71,21 @@ namespace
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr.sin_port = 0;
 
-    auto listeningsocket = socket(AF_INET, type, IPPROTO_TCP);
+    auto listeningsocket = ::socket(AF_INET, type, IPPROTO_TCP);
 
     int one = 1;
     setsockopt(listeningsocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
 
-    bind(listeningsocket, (sockaddr*)&addr, sizeof(addr));
+    ::bind(listeningsocket, (sockaddr*)&addr, sizeof(addr));
 
     socklen_t addrlen = sizeof(addr);
     getsockname(listeningsocket, (sockaddr*)&addr, &addrlen);
 
-    listen(listeningsocket, 1);
+    ::listen(listeningsocket, 1);
 
-    sv[0] = socket(AF_INET, type, protocol);
+    sv[0] = ::socket(AF_INET, type, protocol);
 
-    connect(sv[0], (sockaddr*)&addr, sizeof(addr));
+    ::connect(sv[0], (sockaddr*)&addr, sizeof(addr));
 
     sv[1] = accept(listeningsocket, 0, 0);
 
@@ -953,7 +953,7 @@ namespace leap { namespace socklib
     // Create a socket that listens for connections
     //
 
-    m_listeningsocket = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    m_listeningsocket = ::socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 
     if (m_listeningsocket == INVALID_SOCKET)
     {
@@ -970,7 +970,7 @@ namespace leap { namespace socklib
     // Bind the listening socket to the port number
     //
 
-    if (bind(m_listeningsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
+    if (::bind(m_listeningsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
     {
       m_errorcondition = GetLastError();
 
@@ -983,7 +983,7 @@ namespace leap { namespace socklib
     // Set the socket to listen for incomming connections
     //
 
-    if (listen(m_listeningsocket, 1) == SOCKET_ERROR)
+    if (::listen(m_listeningsocket, 1) == SOCKET_ERROR)
     {
       m_errorcondition = GetLastError();
 
@@ -1276,7 +1276,7 @@ namespace leap { namespace socklib
       // Create the Client Socket
       //
 
-      m_connectedsocket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+      m_connectedsocket = ::socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 
       if (m_connectedsocket != INVALID_SOCKET)
       {
@@ -1479,7 +1479,7 @@ namespace leap { namespace socklib
     // Create a socket that listens for connections
     //
 
-    m_listeningsocket = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    m_listeningsocket = ::socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 
     if (m_listeningsocket == INVALID_SOCKET)
     {
@@ -1496,7 +1496,7 @@ namespace leap { namespace socklib
     // Bind the listening socket to the port number
     //
 
-    if (bind(m_listeningsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
+    if (::bind(m_listeningsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
     {
       m_errorcondition = GetLastError();
 
@@ -1505,7 +1505,7 @@ namespace leap { namespace socklib
       return false;
     }
 
-    if (listen(m_listeningsocket, SOMAXCONN) == SOCKET_ERROR)
+    if (::listen(m_listeningsocket, SOMAXCONN) == SOCKET_ERROR)
     {
       m_errorcondition = GetLastError();
 
@@ -1820,7 +1820,7 @@ namespace leap { namespace socklib
     // Create a socket that listens for connections
     //
 
-    m_connectedsocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    m_connectedsocket = ::socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
     if (m_connectedsocket == INVALID_SOCKET)
     {
@@ -1839,7 +1839,7 @@ namespace leap { namespace socklib
     // Bind the socket to the port number
     //
 
-    if (bind(m_connectedsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
+    if (::bind(m_connectedsocket, (sockaddr*)&addr, sizeof(addr)) != 0)
     {
       m_errorcondition = GetLastError();
 

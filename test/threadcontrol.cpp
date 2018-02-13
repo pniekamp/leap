@@ -232,7 +232,7 @@ static void ThreadLatch()
   ThreadControl tc;
 
   for(int i = 0; i < 128; ++i)
-    tc.create_thread([&,i]() { sleep_for(100); latch.release(); return 0; });
+    tc.create_thread([&]() { sleep_for(100); latch.release(); return 0; });
 
   latch.wait();
 
@@ -267,7 +267,7 @@ static void ThreadSemaphore()
   ThreadControl tc;
 
   for(int i = 0; i < 128; ++i)
-    tc.create_thread([&,i]() { sem.wait(); return 0; });
+    tc.create_thread([&]() { sem.wait(); return 0; });
 
   sem.release(128);
 

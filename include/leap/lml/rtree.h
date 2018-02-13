@@ -224,7 +224,7 @@ namespace leap { namespace lml
     //|///////////////////// RTree::normal_iterator /////////////////////////
     template<typename Item, size_t dimension, class box, typename Alloc>
     template<typename Iterator>
-    basic_rtree<Item, dimension, box, Alloc>::normal_iterator<Iterator> &basic_rtree<Item, dimension, box, Alloc>::normal_iterator<Iterator>::operator++()
+    typename basic_rtree<Item, dimension, box, Alloc>::template normal_iterator<Iterator> &basic_rtree<Item, dimension, box, Alloc>::normal_iterator<Iterator>::operator++()
     {
       if (m_descend)
       {
