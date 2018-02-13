@@ -2,15 +2,19 @@ language: cpp
 
 matrix:
   include:
-    # Clang 3.5
-    - env: COMPILER=clang++-3.9
+    # Clang 3.9
+    - env: COMPILER=clang++-3.9 CMAKE_OPTIONS=""
       addons: { apt: { packages: ["clang-3.9"], sources: ["llvm-toolchain-trusty-3.9"] } }
 
-before_script:
+install:
   - export CCX=${COMPILER}
+  - ${CXX} --version
+  - cmake --version
+
+before_script:
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake .. ${CMAKE_OPTIONS}
 
 script: 
   - make
