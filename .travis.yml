@@ -4,7 +4,7 @@ matrix:
   include:
     # Clang 5.0
     - env: COMPILER=clang++-5.0 CMAKE_OPTIONS=""
-      addons: { apt: { packages: ["clang-5.0"], sources: ["llvm-toolchain-trusty-5.0"] } }
+      addons: { apt: { packages: ["g++-5", "clang-5.0"], sources: ["ubuntu-toolchain-r-test", "llvm-toolchain-trusty-5.0"] } }
 
 install:
   - export CXX=${COMPILER}
@@ -14,7 +14,7 @@ install:
 before_script:
   - mkdir build
   - cd build
-  - cmake .. ${CMAKE_OPTIONS}
+  - cmake ${CMAKE_OPTIONS} ..
 
 script: 
   - make
