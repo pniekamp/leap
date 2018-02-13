@@ -13,6 +13,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <type_traits>
 #include <algorithm>
 
 /**

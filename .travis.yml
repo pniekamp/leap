@@ -1,7 +1,8 @@
 language: cpp
+os: linux
+dist: precise
 
 compiler:
-  - gcc
   - clang
 
 before_script:
@@ -10,4 +11,4 @@ before_script:
   - cmake ..
 
 script: 
-  - make && make test
+  - make
