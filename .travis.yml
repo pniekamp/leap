@@ -7,7 +7,7 @@ matrix:
       addons: { apt: { packages: ["clang-3.9"], sources: ["llvm-toolchain-trusty-3.9"] } }
 
 install:
-  - export CCX=${COMPILER}
+  - export CXX=${COMPILER}
   - ${CXX} --version
   - cmake --version
 
