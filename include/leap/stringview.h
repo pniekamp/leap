@@ -13,7 +13,6 @@
 
 #include <string>
 #include <stdexcept>
-#include <type_traits>
 #include <algorithm>
 
 /**
@@ -72,7 +71,7 @@ namespace leap
       constexpr int compare(basic_string_view s) const noexcept;
 
       constexpr size_t find(T c, size_t pos = 0) const;
-      constexpr size_t find(const T *s, size_t pos = 0) const;
+      constexpr size_t find(T const *s, size_t pos = 0) const;
 
       constexpr size_t find_first_of(T c, size_t pos = 0) const;
       constexpr size_t find_first_of(T const *s, size_t pos = 0) const;
@@ -151,7 +150,7 @@ namespace leap
   }
 
   template<typename T, class traits>
-  constexpr size_t basic_string_view<T, traits>::find(const T *s, size_t pos) const
+  constexpr size_t basic_string_view<T, traits>::find(T const *s, size_t pos) const
   {
     for(auto i = pos; i < m_size - std::min(m_size, traits::length(s)); ++i)
     {

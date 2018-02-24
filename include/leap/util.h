@@ -869,7 +869,7 @@ namespace leap
 
 
   template<typename T>
-  std::basic_string<T> strxpnd(const T *src)
+  std::basic_string<T> strxpnd(T const *src)
   {
     return strxpnd(std::basic_string<T>(src));
   }
@@ -898,7 +898,7 @@ namespace leap
 
 
   template<typename T>
-  void setenv(const T *envname, const T *envval)
+  void setenv(T const *envname, T const *envval)
   {
     setenv(std::basic_string<T>(envname), std::basic_string<T>(envval));
   }
@@ -963,7 +963,7 @@ namespace leap
 
 
   template<typename T>
-  std::basic_string<T> strvpnd(const T *src)
+  std::basic_string<T> strvpnd(T const *src)
   {
     return strvpnd(std::basic_string<T>(src));
   }

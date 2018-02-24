@@ -87,7 +87,7 @@ namespace leap
 
       void define(string_type name, string_type value);
 
-      operator bool() const { return (m_state == std::ios_base::goodbit); }
+      explicit operator bool() const { return (m_state == std::ios_base::goodbit); }
 
       void set_state(std::ios_base::iostate state) { m_state = state; }
 
@@ -107,7 +107,7 @@ namespace leap
 
       bool getline(T *buffer, unsigned int n);
 
-      void preparse(const T *src, T *dest, unsigned int n);
+      void preparse(T const *src, T *dest, unsigned int n);
       void parse_hashdefine(T *buffer);
       void parse_headerline(T *buffer1, entry_type *entry);
       void parse_entryline(T *buffer, entry_type *entry);
@@ -218,7 +218,7 @@ namespace leap
 
   //|///////////////////// sapstream::pre_parse /////////////////////////////
   template<typename T, class traits>
-  void basic_sapstream<T, traits>::preparse(const T *src, T *dest, unsigned int n)
+  void basic_sapstream<T, traits>::preparse(T const *src, T *dest, unsigned int n)
   {
     // Check for whole line comments
     if (*src == '#' || *src == '/' || *src == '!' || *src == '{' || *src == '}')
@@ -256,7 +256,7 @@ namespace leap
     // Extract Name
     //
 
-    const T *name = buffer;
+    T const *name = buffer;
 
     while (*buffer != 0 && !is_white(*buffer))
       ++buffer;
@@ -274,7 +274,7 @@ namespace leap
     // Extract Value
     //
 
-    const T *value = buffer;
+    T const *value = buffer;
 
     //
     // Define Variable
@@ -298,7 +298,7 @@ namespace leap
     // Extract EntryType
     //
 
-    const T *type = buffer;
+    T const *type = buffer;
 
     while (*buffer != 0 && !is_white(*buffer))
       ++buffer;
@@ -318,7 +318,7 @@ namespace leap
     // Extract EntryID
     //
 
-    const T *id = buffer;
+    T const *id = buffer;
 
     entry->add(literal_entryid, id);
   }
@@ -340,12 +340,12 @@ namespace leap
       // Extract Name
       //
 
-      const T *beg = buffer;
+      T const *beg = buffer;
 
       while (*buffer != 0 && *buffer != '=' && *buffer != '@' && *buffer != ':')
         ++buffer;
 
-      const T *end = buffer - 1;
+      T const *end = buffer - 1;
 
       if (*buffer != 0)
       {
@@ -667,6 +667,7 @@ namespace leap
 
   //|--------------------- basic_issapstream --------------------------------
   //|------------------------------------------------------------------------
+
   template<typename T, class traits = std::char_traits<T>>
   class basic_issapstream : public basic_sapstream<T, traits>
   {
@@ -703,7 +704,7 @@ namespace leap
   class basic_ifsapstream : public basic_sapstream<T, traits>
   {
     public:
-      basic_ifsapstream(const T *filename, std::ios::openmode mode = std::ios::in);
+      basic_ifsapstream(T const *filename, std::ios::openmode mode = std::ios::in);
       ~basic_ifsapstream();
   };
 
@@ -713,7 +714,7 @@ namespace leap
 
   //|///////////////////// ifsapstream::Constructor /////////////////////////
   template<typename T, class traits>
-  basic_ifsapstream<T, traits>::basic_ifsapstream(const T *filename, std::ios::openmode mode)
+  basic_ifsapstream<T, traits>::basic_ifsapstream(T const *filename, std::ios::openmode mode)
   {
     std::basic_filebuf<T, traits> *filebuf = new std::basic_filebuf<T, traits>;
 
