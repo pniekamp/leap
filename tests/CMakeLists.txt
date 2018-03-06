@@ -1,10 +1,6 @@
 #
-# libleap test
+# libleap tests
 #
-
-if(POLICY CMP0037)
-  cmake_policy(SET CMP0037 OLD)
-endif(POLICY CMP0037)
 
 if(UNIX OR MINGW)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter")
@@ -48,14 +44,14 @@ set(SRCS ${SRCS} bound.cpp)
 set(SRCS ${SRCS} rtree.cpp)
 set(SRCS ${SRCS} array.cpp)
 
-add_executable(test ${SRCS})
+add_executable(tests ${SRCS})
 
-target_link_libraries(test leap)
+target_link_libraries(tests leap)
 
 
 #
 # install
 #
 
-INSTALL(TARGETS test DESTINATION bin)
+INSTALL(TARGETS tests DESTINATION bin)
 

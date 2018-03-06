@@ -51,7 +51,7 @@ namespace leap
    * The Simple Attribute Pair Stream is a text stream of the form :-
    *
    * \code
-   *   <EntryType> <EntryID>
+   *   <EntryType> <EntryId>
    *   {
    *     <attribute> [ = <value> ]
    *     <attribute> [ = <value> ]
@@ -70,7 +70,7 @@ namespace leap
       typedef basic_sapentry<T, traits> entry_type;
       typedef std::basic_string<T, traits> string_type;
       typedef std::basic_streambuf<T, traits> streambuf_type;
-      typedef basic_string_view<T, traits> string_view_type;
+      typedef leap::basic_string_view<T, traits> string_view_type;
 
       enum ParseFlags
       {
@@ -288,8 +288,8 @@ namespace leap
   template<typename T, class traits>
   void basic_sapstream<T, traits>::parse_headerline(T *buffer, basic_sapentry<T, traits> *entry)
   {
-    static const string_type literal_entrytype = {'E', 'n', 't', 'r', 'y', 'T', 'y', 'p', 'e'};
-    static const string_type literal_entryid = {'E', 'n', 't', 'r', 'y', 'I', 'D'};
+    static T const entrytype_literal[] = { 'E', 'n', 't', 'r', 'y', 'T', 'y', 'p', 'e', 0 };
+    static T const entryid_literal[] = { 'E', 'n', 't', 'r', 'y', 'I', 'd', 0 };
 
     entry->clear();
     entry->push_substream(*this);
@@ -312,15 +312,15 @@ namespace leap
     while (is_white(*buffer))
       ++buffer;
 
-    entry->add(literal_entrytype, type);
+    entry->add(entrytype_literal, type);
 
     //
-    // Extract EntryID
+    // Extract EntryId
     //
 
     T const *id = buffer;
 
-    entry->add(literal_entryid, id);
+    entry->add(entryid_literal, id);
   }
 
 
@@ -443,7 +443,7 @@ namespace leap
   template<typename T, class traits>
   basic_sapstream<T, traits> &basic_sapstream<T, traits>::operator >>(basic_sapentry<T, traits> &entry)
   {
-    static const string_type literal_hashdefine = { '#', 'd', 'e', 'f', 'i', 'n', 'e' };
+    static T const hashdefine_literal[] = { '#', 'd', 'e', 'f', 'i', 'n', 'e' };
 
     int level = 0;
     T buffer1[512];
@@ -463,7 +463,7 @@ namespace leap
       while (is_white(buffer2[pos]))
         ++pos;
 
-      if (traits::compare(&buffer2[pos], literal_hashdefine.c_str(), 7) == 0)
+      if (traits::compare(&buffer2[pos], hashdefine_literal, extentof(hashdefine_literal)) == 0)
         parse_hashdefine(&buffer2[pos]);
 
       // Check if we are nesting
@@ -528,7 +528,7 @@ namespace leap
     public:
 
       typedef std::basic_string<T, traits> string_type;
-      typedef basic_string_view<T, traits> string_view_type;
+      typedef leap::basic_string_view<T, traits> string_view_type;
 
       struct Attribute
       {
@@ -565,6 +565,7 @@ namespace leap
       void push_substream(basic_sapstream<T, traits> const &stream);
 
       basic_sapstream<T, traits> &substream();
+      basic_sapstream<T, traits> const &substream() const;
 
     private:
 
@@ -615,6 +616,14 @@ namespace leap
   //|///////////////////// sapentry::substream //////////////////////////////
   template<typename T, class traits>
   basic_sapstream<T, traits> &basic_sapentry<T, traits>::substream()
+  {
+    return m_substream;
+  }
+
+
+  //|///////////////////// sapentry::substream //////////////////////////////
+  template<typename T, class traits>
+  basic_sapstream<T, traits> const &basic_sapentry<T, traits>::substream() const
   {
     return m_substream;
   }

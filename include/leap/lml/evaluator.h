@@ -90,10 +90,10 @@ namespace leap { namespace lml
 
       enum class OpCode
       {
-        mod, div, mul, abs, min, max, floor, ceil, round, trunc, sin, cos, tan, asin, acos, atan, atan2, pow, sqrt, log, exp, log2, exp2, cond, plus, minus, leq, geq, le, ge, eq, neq, bnot, band, bor, open, close, comma
+        mod, div, mul, abs, min, max, floor, ceil, round, trunc, clamp, sin, cos, tan, asin, acos, atan, atan2, pow, sqrt, log, exp, log2, exp2, cond, plus, minus, leq, geq, le, ge, eq, neq, bnot, band, bor, open, close, comma
       };
 
-      static constexpr const char *Operators[8] = { "% / * abs min max floor ceil round trunc sin cos tan asin acos atan atan2 pow sqrt log exp log2 exp2 if ", "+ - ", "<= >= < > ", "== != ", "! && || ", "( ) ", ", ", "" };
+      static constexpr const char *Operators[8] = { "% / * abs min max floor ceil round trunc clamp sin cos tan asin acos atan atan2 pow sqrt log exp log2 exp2 if ", "+ - ", "<= >= < > ", "== != ", "! && || ", "( ) ", ", ", "" };
 
       static constexpr size_t is_literal(leap::string_view str);
       static constexpr size_t is_identifier(leap::string_view str);
@@ -267,6 +267,7 @@ namespace leap { namespace lml
                 *order = 2;
                 break;
 
+              case OpCode::clamp:
               case OpCode::cond:
                 *order = 3;
                 break;
@@ -342,7 +343,7 @@ namespace leap { namespace lml
         return { std::log(first.value) };
 
       case OpCode::exp:
-        return { exp(first.value) };
+        return { std::exp(first.value) };
 
       case OpCode::log2:
         return { std::log2(first.value) };
@@ -433,6 +434,9 @@ namespace leap { namespace lml
 
     switch (op.code)
     {
+      case OpCode::clamp:
+        return { clamp(first.value, second.value, third.value) };
+
       case OpCode::cond:
         return { fcmp(first.value, 0.0) ? third.value : second.value };
 

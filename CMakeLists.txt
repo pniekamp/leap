@@ -24,7 +24,7 @@ find_package(Threads REQUIRED)
 add_subdirectory(src)
 
 #
-# test executable
+# tests executable
 #
 
-add_subdirectory(test)
+add_subdirectory(tests)

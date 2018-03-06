@@ -130,6 +130,7 @@ void EvaluatorTest()
 
   check(scope, "min(0.1 + x * 3, 0.2 * x)", 0.2 * x);
   check(scope, "max(0.1 + x * 3, 0.2 * x)", 0.1 + x * 3);
+  check(scope, "clamp(x, 0.0, 1.0)", 1.0);
 
   check(scope, "if(true, 1, 0)", 1);
   check(scope, "if(false, 1, 0)", 0);
