@@ -175,7 +175,7 @@ namespace leap
   {
     if (m_size != 0)
     {
-      for(size_t i = std::min(m_size - 1, pos); i >= 0; --i)
+      for(size_t i = std::min(m_size - 1, pos); true; --i)
       {
         if (m_ptr[i] == c)
           return i;
@@ -193,7 +193,7 @@ namespace leap
   {
     if (m_size != 0 && m_size >= traits::length(s))
     {
-      for(size_t i = std::min(m_size - 1, pos) - (std::max(size_t(1), traits::length(s)) - 1); i >= 0; --i)
+      for(size_t i = std::min(m_size - 1, pos) - (std::max(size_t(1), traits::length(s)) - 1); true; --i)
       {
         bool found = true;
         for(auto j = 0; found && s[j] != 0; ++j)
@@ -276,7 +276,7 @@ namespace leap
   {
     if (m_size != 0)
     {
-      for(size_t i = std::min(m_size - 1, pos); i >= 0; --i)
+      for(size_t i = std::min(m_size - 1, pos); true; --i)
       {
         if (m_ptr[i] == c)
           return i;
@@ -294,7 +294,7 @@ namespace leap
   {
     if (m_size != 0)
     {
-      for(size_t i = std::min(m_size - 1, pos); i >= 0; --i)
+      for(size_t i = std::min(m_size - 1, pos); true; --i)
       {
         for(auto c = s; *c != 0; ++c)
         {
@@ -315,7 +315,7 @@ namespace leap
   {
     if (m_size != 0)
     {
-      for(size_t i = std::min(m_size - 1, pos); i >= 0; --i)
+      for(size_t i = std::min(m_size - 1, pos); true; --i)
       {
         bool found = (m_ptr[i] == c);
 
@@ -335,7 +335,7 @@ namespace leap
   {
     if (m_size != 0)
     {
-      for(size_t i = std::min(m_size - 1, pos); i >= 0; --i)
+      for(size_t i = std::min(m_size - 1, pos); true; --i)
       {
         bool found = false;
         for(auto c = s; !found && *c != 0; ++c)
