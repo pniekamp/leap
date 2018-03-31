@@ -39,7 +39,7 @@ namespace leap { namespace crypto
 
 
   //|///////////////////// sha1::Constructor ////////////////////////////////
-  sha1::sha1(sha1 &&that)
+  sha1::sha1(sha1 &&that) noexcept
     : state(nullptr)
   {
     swap(state, that.state);
@@ -174,7 +174,7 @@ namespace leap { namespace crypto
       while (len >= i) {
           memcpy(&ctx->buffer[j], data, i);
           sha1_transform(ctx->state, ctx->buffer);
-          data = (const uint8_t *)data + i;
+          data = (uint8_t const *)data + i;
           len -= i;
           i = 64;
           j = 0;

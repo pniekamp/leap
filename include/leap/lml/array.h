@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef LMLARRAY_HH
-#define LMLARRAY_HH
+#pragma once
 
 #include <vector>
 #include <cassert>
@@ -19,7 +18,6 @@
 #include <numeric>
 #include <memory>
 #include <initializer_list>
-
 
 /**
  * \namespace leap::lml
@@ -35,10 +33,8 @@
 
 namespace leap { namespace lml
 {
-
   namespace ArrayImpl
   {
-
     //|-------------------- ArrayBase ---------------------------------------
     //|----------------------------------------------------------------------
 
@@ -47,11 +43,11 @@ namespace leap { namespace lml
     {
       public:
 
-        typedef typename std::iterator_traits<Iterator>::value_type value_type;
-        typedef typename std::iterator_traits<Iterator>::reference reference;
-        typedef typename std::iterator_traits<Iterator>::pointer pointer;
-        typedef typename std::iterator_traits<Iterator>::value_type const &const_reference;
-        typedef typename std::iterator_traits<Iterator>::value_type const *const_pointer;
+        using value_type = typename std::iterator_traits<Iterator>::value_type;
+        using reference = typename std::iterator_traits<Iterator>::reference;
+        using pointer = typename std::iterator_traits<Iterator>::pointer;
+        using const_reference = typename std::iterator_traits<Iterator>::value_type const &;
+        using const_pointer = typename std::iterator_traits<Iterator>::value_type const *;
 
       public:
 
@@ -59,9 +55,9 @@ namespace leap { namespace lml
 
         size_t size() const { return m_extents[0] * m_strides[0]; }
 
-        const size_t *shape() const { return m_extents; }
+        size_t const *shape() const { return m_extents; }
 
-        const size_t *strides() const { return m_strides; }
+        size_t const *strides() const { return m_strides; }
 
       protected:
 
@@ -95,7 +91,7 @@ namespace leap { namespace lml
     {
       size_t args[] = { extents... };
 
-      return std::accumulate(args, args+sizeof...(extents), 1, std::multiplies<int>());
+      return std::accumulate(args, args+sizeof...(extents), 1, std::multiplies<>());
     }
   }
 
@@ -108,11 +104,11 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef typename std::iterator_traits<Iterator>::value_type value_type;
-      typedef typename std::iterator_traits<Iterator>::reference reference;
-      typedef typename std::iterator_traits<Iterator>::pointer pointer;
-      typedef typename std::iterator_traits<Iterator>::value_type const &const_reference;
-      typedef typename std::iterator_traits<Iterator>::value_type const *const_pointer;
+      using value_type = typename std::iterator_traits<Iterator>::value_type;
+      using reference = typename std::iterator_traits<Iterator>::reference;
+      using pointer = typename std::iterator_traits<Iterator>::pointer;
+      using const_reference = typename std::iterator_traits<Iterator>::value_type const &;
+      using const_pointer = typename std::iterator_traits<Iterator>::value_type const *;
 
     public:
 
@@ -134,7 +130,7 @@ namespace leap { namespace lml
 
     protected:
 
-      explicit ArrayView(Iterator const &data = NULL, size_t const *extents = NULL, size_t const *strides = NULL)
+      explicit ArrayView(Iterator const &data = nullptr, size_t const *extents = nullptr, size_t const *strides = nullptr)
       {
         this->set_view(data, extents, strides);
       }
@@ -147,11 +143,11 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef typename std::iterator_traits<Iterator>::value_type value_type;
-      typedef typename std::iterator_traits<Iterator>::reference reference;
-      typedef typename std::iterator_traits<Iterator>::pointer pointer;
-      typedef typename std::iterator_traits<Iterator>::value_type const &const_reference;
-      typedef typename std::iterator_traits<Iterator>::value_type const *const_pointer;
+      using value_type = typename std::iterator_traits<Iterator>::value_type;
+      using reference = typename std::iterator_traits<Iterator>::reference;
+      using pointer = typename std::iterator_traits<Iterator>::pointer;
+      using const_reference = typename std::iterator_traits<Iterator>::value_type const &;
+      using const_pointer = typename std::iterator_traits<Iterator>::value_type const *;
 
     public:
       template<typename Iter>
@@ -182,7 +178,7 @@ namespace leap { namespace lml
 
     protected:
 
-      explicit ArrayView(Iterator const &data = NULL, size_t const *extents = NULL, size_t const *strides = NULL)
+      explicit ArrayView(Iterator const &data = nullptr, size_t const *extents = nullptr, size_t const *strides = nullptr)
       {
         this->set_view(data, extents, strides);
       }
@@ -206,11 +202,11 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef T value_type;
-      typedef T &reference;
-      typedef T *pointer;
-      typedef T const &const_reference;
-      typedef T const *const_pointer;
+      using value_type = T;
+      using reference = T &;
+      using pointer = T *;
+      using const_reference = T const &;
+      using const_pointer = T const *;
 
     public:
 
@@ -221,7 +217,7 @@ namespace leap { namespace lml
 
       // Copyable & Moveable
       Array(Array const &other);
-      Array(Array &&other);
+      Array(Array &&other) noexcept;
       Array &operator=(Array other);
 
       template<typename... Args>
@@ -274,7 +270,7 @@ namespace leap { namespace lml
 
   //|///////////////////// Array::Constructor //////////////////////////////
   template<typename T, size_t dimension>
-  Array<T, dimension>::Array(Array &&other)
+  Array<T, dimension>::Array(Array &&other) noexcept
     : ArrayView<T*, dimension>(),
       m_extents(std::move(other.m_extents)),
       m_strides(std::move(other.m_strides)),
@@ -309,9 +305,8 @@ namespace leap { namespace lml
       m_extents[i] = (i < sizeof...(extents)) ? args[i] : 1;
 
     for(size_t i = 0; i < dimension; ++i)
-      m_strides[i] = std::accumulate(m_extents.data()+i+1, m_extents.data()+dimension, 1, std::multiplies<int>());
+      m_strides[i] = std::accumulate(m_extents.data()+i+1, m_extents.data()+dimension, 1, std::multiplies<>());
   }
-
 
 
   /**
@@ -333,5 +328,3 @@ namespace leap { namespace lml
 
 } // namespace lml
 } // namespace leap
-
-#endif

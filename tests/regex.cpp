@@ -18,7 +18,6 @@ using namespace regex;
 
 void RegExTest();
 
-
 ////////// print_w ///////////
 template<typename T> struct print_w
 {

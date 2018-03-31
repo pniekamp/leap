@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef LMLCUBICSPLINE_HH
-#define LMLCUBICSPLINE_HH
+#pragma once
 
 #include <vector>
 #include <leap/lml/point.h>
@@ -18,7 +17,6 @@
 
 namespace leap { namespace lml
 {
-
   //|-------------------- CubicSpline ---------------------------------------
   //|------------------------------------------------------------------------
   /**
@@ -34,15 +32,15 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef Point point_type;
-      typedef coord_type_t<Point> value_type;
+      using point_type = Point;
+      using value_type = coord_type_t<Point>;
 
     public:
       CubicSpline() = default;
-      CubicSpline(std::vector<Point> points, value_type initial = 1e30, value_type final = 1e30);
+      explicit CubicSpline(std::vector<Point> points, value_type initial = 1e30, value_type final = 1e30);
 
-      auto value(value_type x) const;
-      auto derivative(value_type x) const;
+      value_type value(value_type x) const;
+      value_type derivative(value_type x) const;
 
     public:
 
@@ -117,7 +115,7 @@ namespace leap { namespace lml
 
   //|///////////////////// CubicSpline::value ///////////////////////////////
   template<typename Point>
-  auto CubicSpline<Point>::value(value_type x) const
+  typename CubicSpline<Point>::value_type CubicSpline<Point>::value(value_type x) const
   {
     assert(m_c.size() != 0);
 
@@ -145,7 +143,7 @@ namespace leap { namespace lml
 
   //|///////////////////// CubicSpline::derivative //////////////////////////
   template<typename Point>
-  auto CubicSpline<Point>::derivative(value_type x) const
+  typename CubicSpline<Point>::value_type CubicSpline<Point>::derivative(value_type x) const
   {
     assert(m_c.size() != 0);
 
@@ -171,8 +169,5 @@ namespace leap { namespace lml
     return dy/dx - (3*a*a-1)/6*dx*m_c[klo] + (3*b*b-1)/6*dx*m_c[khi];
   }
 
-
 } // namespace lml
 } // namespace leap
-
-#endif

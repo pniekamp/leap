@@ -12,8 +12,7 @@
 // this copyright notice is retained
 //
 
-#ifndef SIGLIB_HH
-#define SIGLIB_HH
+#pragma once
 
 #include <vector>
 #include <functional>
@@ -33,8 +32,7 @@
 
 namespace leap { namespace siglib
 {
-  template<typename R, typename... Args> class Signal; // undefined
-
+  template<typename R, typename... Args> class Signal;
 
   //|///////////////////////// Signal ///////////////////////////////////////
   /**
@@ -178,7 +176,4 @@ namespace leap { namespace siglib
     m_sinks.clear();
   }
 
-
 } } // namespace siglib
-
-#endif // SIGLIB_HH

@@ -12,8 +12,7 @@
 // this copyright notice is retained
 //
 
-#ifndef SOCKLIB_HH
-#define SOCKLIB_HH
+#pragma once
 
 #include <leap/stringview.h>
 #include <cstdio>
@@ -46,7 +45,6 @@
 
 namespace leap { namespace socklib
 {
-
   struct socket_t
   {
     SOCKET sid;
@@ -60,7 +58,7 @@ namespace leap { namespace socklib
     unsigned int bcast;
   };
 
-  typedef sockaddr_in6 sockaddr_t;
+  using sockaddr_t = sockaddr_in6;
 
   ///////////////////// InitialiseSocketSubsystem /////////////////////////////
   bool InitialiseSocketSubsystem();
@@ -439,7 +437,7 @@ namespace leap { namespace socklib
 
       void broadcast(const void *buffer, size_t bytes, unsigned int ip, int port);
 
-      size_t receive(void *buffer, size_t n, sockaddr_in *addr = NULL);
+      size_t receive(void *buffer, size_t n, sockaddr_in *addr = nullptr);
 
     private:
 
@@ -481,5 +479,3 @@ namespace leap { namespace socklib
   std::vector<interface_t> interfaces();
 
 } } // namespace socklib
-
-#endif // SOCKLIB_HH

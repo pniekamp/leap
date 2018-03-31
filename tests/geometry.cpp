@@ -242,7 +242,7 @@ void TestPolygon()
   Q.push_back(Vector2(15.0, 15.0));
   Q.push_back(Vector2(5.0, 15.0));
 
-  vector<vector<Vector2d> > R = boolean_intersection(P, Q);
+  vector<vector<Vector2d>> R = boolean_intersection(P, Q);
 
   for(size_t i = 0; i < R.size(); ++i)
   {

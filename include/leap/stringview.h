@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef LMLSTRINGVIEW_HH
-#define LMLSTRINGVIEW_HH
+#pragma once
 
 #include <string>
 #include <stdexcept>
@@ -44,10 +43,10 @@ namespace leap
   {
     public:
 
-      typedef T value_type;
-      typedef T char_type;
-      typedef traits traits_type;
-      typedef T const *const_iterator;
+      using char_type = T;
+      using value_type = T;
+      using traits_type = traits;
+      using const_iterator = T const *;
 
     public:
       basic_string_view() = default;
@@ -432,9 +431,7 @@ namespace leap
     return lhs.compare(rhs) < 0;
   }
 
-  typedef basic_string_view<char> string_view;
-  typedef basic_string_view<wchar_t> wstring_view;
+  using string_view = basic_string_view<char>;
+  using wstring_view = basic_string_view<wchar_t>;
 
 } // namespace
-
-#endif

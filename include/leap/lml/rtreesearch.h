@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef RTREESEARCH_HH
-#define RTREESEARCH_HH
+#pragma once
 
 #include <leap/lml/rtree.h>
 #include <leap/lml/vector.h>
@@ -32,7 +31,6 @@ namespace leap { namespace lml
 {
   namespace RTree
   {
-
     //|-------------------- bounded_iterator ---------------------------------
     //|-----------------------------------------------------------------------
     /**
@@ -47,13 +45,13 @@ namespace leap { namespace lml
     {
       public:
 
-        typedef typename Iterator::item_type value_type;
-        typedef typename Iterator::bound_type bound_type;
+        using value_type = typename Iterator::item_type;
+        using bound_type = typename Iterator::bound_type;
 
-        typedef value_type *pointer;
-        typedef value_type &reference;
-        typedef std::ptrdiff_t difference_type;
-        typedef std::forward_iterator_tag iterator_category;
+        using pointer = value_type *;
+        using reference = value_type &;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
 
       public:
         rtree_bounded_iterator()
@@ -178,5 +176,3 @@ namespace leap { namespace lml
 } // namespace rtree
 } // namespace lml
 } // namespace leap
-
-#endif

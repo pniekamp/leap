@@ -12,8 +12,7 @@
 // this copyright notice is retained
 //
 
-#ifndef HTTPLIB_HH
-#define HTTPLIB_HH
+#pragma once
 
 #include <leap/sockets.h>
 #include <leap/siglib.h>
@@ -24,7 +23,6 @@
 #include <map>
 #include <memory>
 #include <algorithm>
-
 
 /**
  * \namespace leap::socklib
@@ -41,7 +39,6 @@ namespace leap { namespace socklib
   class HTTPMessage
   {
     public:
-      HTTPMessage();
 
       int status() const { return m_status; }
 
@@ -70,7 +67,7 @@ namespace leap { namespace socklib
 
     private:
 
-      int m_status;
+      int m_status = 408;
 
       std::map<std::string, std::string, std::less<>> m_header;
 
@@ -98,7 +95,7 @@ namespace leap { namespace socklib
       std::string const &method() const { return m_method; }
       std::string const &location() const { return m_location; }
 
-      virtual std::string head() const;
+      std::string head() const override;
 
     public:
 
@@ -132,7 +129,7 @@ namespace leap { namespace socklib
 
       void set_statustxt(std::string statustxt);
 
-      virtual std::string head() const;
+      std::string head() const override;
 
     private:
 
@@ -313,8 +310,8 @@ namespace leap { namespace socklib
 
     public:
 
-      typedef Connection *socket_t;
-      typedef leap::socklib::sockaddr_t sockaddr_t;
+      using socket_t = Connection *;
+      using sockaddr_t = leap::socklib::sockaddr_t;
 
       leap::siglib::Signal<void (socket_t, sockaddr_t*)> sigAccept;
       leap::siglib::Signal<void (socket_t, HTTPRequest const &)> sigRespond;
@@ -333,7 +330,7 @@ namespace leap { namespace socklib
 
       bool send(socket_t connection, WebSocketMessage const &message);
 
-      void broadcast(string_view endpoint, WebSocketMessage const &message, socket_t ignore = 0);
+      void broadcast(string_view endpoint, WebSocketMessage const &message, socket_t ignore = nullptr);
 
       void drop(socket_t connection);
 
@@ -392,5 +389,3 @@ namespace leap { namespace socklib
   std::vector<uint8_t> base64_decode(string_view payload);
 
 } } // namespace socklib
-
-#endif // HTTPLIB_HH

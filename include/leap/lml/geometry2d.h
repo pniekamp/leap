@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef GEOMETRY2D_HH
-#define GEOMETRY2D_HH
+#pragma once
 
 #include "lml.h"
 #include <leap/lml/geometry.h>
@@ -413,5 +412,3 @@ namespace leap { namespace lml
 
 #include "delaunay2d_p.h"
 #include "voronoi2d_p.h"
-
-#endif

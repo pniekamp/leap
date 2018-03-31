@@ -18,6 +18,7 @@
 #include "leap/hash.h"
 #include <algorithm>
 #include <fstream>
+#include <cstdlib>
 #include <cassert>
 #include <random>
 #include <mutex>
@@ -30,7 +31,6 @@ using namespace leap::threadlib;
 
 namespace
 {
-
   //////////////////// rnd8 ////////////////////////////////
   uint8_t rnd8()
   {
@@ -126,7 +126,7 @@ namespace
         if (!state.chunked)
         {
           state.chunksize = 0;
-          state.remaining = atoi(msg->header("Content-Length").c_str());
+          state.remaining = strtol(msg->header("Content-Length").c_str(), nullptr, 10);
         }
 
         state.step = 4;
@@ -142,7 +142,7 @@ namespace
           if (!readline(socket, line, sizeof(line)))
             return false;
 
-          state.chunksize = strtol(line, NULL, 16);
+          state.chunksize = strtol(line, nullptr, 16);
           state.remaining = state.chunksize;
         }
 
@@ -461,14 +461,6 @@ namespace leap { namespace socklib
   //|--------------------- HTTPMessage --------------------------------------
   //|------------------------------------------------------------------------
 
-
-  //|///////////////////// HTTPMessage::Constructor /////////////////////////
-  HTTPMessage::HTTPMessage()
-  {
-    m_status = 408;
-  }
-
-
   //|///////////////////// HTTPMessage::header //////////////////////////////
   string const &HTTPMessage::header(leap::string_view name) const
   {
@@ -563,7 +555,6 @@ namespace leap { namespace socklib
   //|--------------------- HTTPRequest --------------------------------------
   //|------------------------------------------------------------------------
 
-
   //|///////////////////// HTTPRequest::Constructor /////////////////////////
   HTTPRequest::HTTPRequest(int status)
   {
@@ -646,10 +637,8 @@ namespace leap { namespace socklib
   }
 
 
-
   //|--------------------- HTTPResponse -------------------------------------
   //|------------------------------------------------------------------------
-
 
   //|///////////////////// HTTPResponse::Constructor ////////////////////////
   HTTPResponse::HTTPResponse(int status, string statustxt)
@@ -716,7 +705,7 @@ namespace leap { namespace socklib
         {
           socket = make_unique<ClientSocket>(this->server.c_str(), this->service.c_str());
 
-          idletime = time(NULL);
+          idletime = time(nullptr);
         }
 
         operator ClientSocket&() { return *socket; }
@@ -764,7 +753,7 @@ namespace leap { namespace socklib
       {
         SyncLock M(m_mutex);
 
-        connection.idletime = time(NULL);
+        connection.idletime = time(nullptr);
 
         m_connections.push_back(std::move(connection));
       }
@@ -773,7 +762,7 @@ namespace leap { namespace socklib
       {
         while (true)
         {
-          time_t now = time(NULL);
+          time_t now = time(nullptr);
 
           {
             SyncLock M(m_mutex);
@@ -826,7 +815,7 @@ namespace leap { namespace socklib
     if (cancel)
       events.add(*cancel);
 
-    time_t start = time(NULL);
+    time_t start = time(nullptr);
 
     try
     {
@@ -869,7 +858,7 @@ namespace leap { namespace socklib
         if (!events.wait_any(timeout))
           throw SocketBase::socket_error("Timeout Receiving Payload");
 
-        if (difftime(time(NULL), start) > timeout/1000.0)
+        if (difftime(time(nullptr), start) > timeout/1000.0)
           break;
 
         if (cancel && *cancel)
@@ -1051,7 +1040,7 @@ namespace leap { namespace socklib
 
 
   //|///////////////////// WebSocket::destroy ///////////////////////////////
-  void leap::socklib::WebSocket::destroy()
+  void WebSocket::destroy()
   {
     m_threadcontrol.join_threads();
 
@@ -1077,8 +1066,8 @@ namespace leap { namespace socklib
       {
         vector<uint8_t> nonce(16, 0);
 
-        for(auto i = nonce.begin(); i != nonce.end(); ++i)
-          *i = rnd8();
+        for(auto &byte : nonce)
+          byte = rnd8();
 
         HTTPRequest request("GET", m_url);
 
@@ -1418,7 +1407,7 @@ namespace leap { namespace socklib
   //|///////////////////// HTTPServer::listen_thread ////////////////////////
   long HTTPServer::listen_thread(unsigned int bindport)
   {
-    leap::socklib::SocketPump socketpump(bindport);
+    SocketPump socketpump(bindport);
 
     WaitGroup events;
     events.add(socketpump.activity());
@@ -1431,7 +1420,7 @@ namespace leap { namespace socklib
 
       while (socketpump.accept_connection(&socket, &addr))
       {
-        Connection *connection = new Connection(socket);
+        auto connection = new Connection(socket);
 
         {
           SyncLock M(m_mutex);
@@ -1602,7 +1591,7 @@ namespace leap { namespace socklib
 
     string result;
 
-    for(uint8_t *in = (uint8_t*)payload; size > 0; )
+    for(auto in = (uint8_t const *)payload; size > 0; )
     {
       int len = 0;
       uint8_t trip[3] = { 0, 0, 0 };

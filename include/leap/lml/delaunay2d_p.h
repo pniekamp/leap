@@ -8,8 +8,9 @@
 // this copyright notice is retained
 //
 
-#ifndef DELAUNAY2DP_HH
-#define DELAUNAY2DP_HH
+#pragma once
+
+#include "lml.h"
 
 //|--------------------- delaunay 2d triangulation --------------------------
 //|--------------------------------------------------------------------------
@@ -113,16 +114,16 @@ namespace leap { namespace lml { namespace Delaunay2d
   {
     public:
 
-      typedef T site_type;
-      typedef std::vector<site_type> sites_type;
+      using site_type = T;
+      using sites_type = std::vector<site_type>;
 
-      typedef Edge<T> *edge_type;
-      typedef std::vector<edge_type> edges_type;
+      using edge_type = Edge<T> *;
+      using edges_type = std::vector<edge_type>;
 
     public:
       Mesh();
       Mesh(Mesh const &) = delete;
-      Mesh(Mesh &&) = delete;
+      Mesh(Mesh &&) noexcept = delete;
       ~Mesh();
 
       void add_site(T const &site);
@@ -201,7 +202,7 @@ namespace leap { namespace lml { namespace Delaunay2d
   template<typename T, class pos>
   Edge<T> *Mesh<T, pos>::make_edge(T *org, T *dst)
   {
-    Edge<T> *quad = new Edge<T>[4];
+    auto quad = new Edge<T>[4];
 
     quad[0].next = &quad[0];
     quad[1].next = &quad[3];
@@ -450,5 +451,3 @@ namespace leap { namespace lml { namespace Delaunay2d
   }
 
 } } } // namespace Delaunay2d
-
-#endif

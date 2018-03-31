@@ -199,9 +199,10 @@ void SocketTest()
 
   cout << "Interfaces Set\n";
 
-  auto ifc = interfaces();
-  for(auto i = ifc.begin(); i != ifc.end(); ++i)
-    cout << "  " << i->name << " " << hex << i->ip << " " << i->mask << " " << i->bcast << dec << endl;
+  for(auto &ifc : interfaces())
+  {
+    cout << "  " << ifc.name << " " << hex << ifc.ip << " " << ifc.mask << " " << ifc.bcast << dec << endl;
+  }
 
   cout << endl;
 }

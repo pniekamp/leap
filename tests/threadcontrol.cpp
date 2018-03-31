@@ -107,7 +107,7 @@ static void ThreadCreateTest()
   mtx.wait();
   cs.wait();
 
-  tc.create_thread(testthread, NULL);
+  tc.create_thread(testthread, nullptr);
 
   sleep_for(100);
 

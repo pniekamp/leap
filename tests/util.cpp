@@ -21,15 +21,15 @@ void UtilTest()
   cout << "Util Test\n\n";
 
   float i = ato<float>("1");
-  if (i != 1)
+  if (i != 1.0f)
     cout << "** Error in ato<int>\n";
 
   float f = ato<float>("2.0");
   if (f != 2.0f)
     cout << "** Error in ato<float>\n";
 
-  double d = ato<float>("3.0");
-  if (d != 3.0f)
+  double d = ato<double>("3.0");
+  if (d != 3.0)
     cout << "** Error in ato<double>\n";
 
   string s = ato<string>("4.0");

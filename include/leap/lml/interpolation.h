@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef LMLINTERPOLATION_HH
-#define LMLINTERPOLATION_HH
+#pragma once
 
 #include <leap/lml/array.h>
 #include <cassert>
@@ -238,13 +237,8 @@ namespace leap { namespace lml
 
       case cubic:
         return interpolate<cubic>(std::forward<P>(xa), std::forward<Q>(ya), std::forward<X>(x));
-
-      default:
-        throw std::logic_error("Unknown Interpolation Type");
     }
   }
 
 } // namespace lml
 } // namespace leap
-
-#endif

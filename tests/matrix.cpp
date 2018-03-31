@@ -21,9 +21,7 @@ using namespace std;
 using namespace leap;
 using namespace leap::lml;
 
-
 void MatrixTest();
-
 
 //|//////////////////// SimpleMatrixTest ////////////////////////////////////
 static void SimpleMatrixTest()

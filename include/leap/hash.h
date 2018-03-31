@@ -2,8 +2,7 @@
 // hash.h
 //
 
-#ifndef HASHLIB_HH
-#define HASHLIB_HH
+#pragma once
 
 #include <memory>
 #include <string>
@@ -16,14 +15,13 @@
 
 namespace leap { namespace crypto
 {
-
   //-------------------------- MD5 --------------------------------------------
   //---------------------------------------------------------------------------
 
   struct md5
   {
     md5();
-    md5(md5 &&);
+    md5(md5 &&) noexcept;
     md5(md5 const &) = delete;
     ~md5();
 
@@ -49,7 +47,7 @@ namespace leap { namespace crypto
   struct sha1
   {
     sha1();
-    sha1(sha1 &&);
+    sha1(sha1 &&) noexcept;
     sha1(sha1 const &) = delete;
     ~sha1();
 
@@ -69,5 +67,3 @@ namespace leap { namespace crypto
   sha1 sha1digest(const void *data, size_t size);
 
 } } // namespace crypto
-
-#endif // HASHLIB_HH

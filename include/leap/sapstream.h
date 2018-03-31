@@ -12,8 +12,7 @@
 // this copyright notice is retained
 //
 
-#ifndef SAPSTREAM_HH
-#define SAPSTREAM_HH
+#pragma once
 
 #include <leap/util.h>
 #include <sstream>
@@ -33,12 +32,10 @@
 
 namespace leap
 {
-
   template<typename T, class traits> class basic_sapentry;
   template<typename T, class traits> class basic_sapstream;
   template<typename T, class traits> class basic_issapstream;
   template<typename T, class traits> class basic_ifsapstream;
-
 
 
   //|------------------------- sapstream ------------------------------------
@@ -67,10 +64,10 @@ namespace leap
   {
     public:
 
-      typedef basic_sapentry<T, traits> entry_type;
-      typedef std::basic_string<T, traits> string_type;
-      typedef std::basic_streambuf<T, traits> streambuf_type;
-      typedef leap::basic_string_view<T, traits> string_view_type;
+      using entry_type = basic_sapentry<T, traits>;
+      using string_type = std::basic_string<T, traits>;
+      using streambuf_type = std::basic_streambuf<T, traits>;
+      using string_view_type= leap::basic_string_view<T, traits>;
 
       enum ParseFlags
       {
@@ -527,8 +524,8 @@ namespace leap
   {
     public:
 
-      typedef std::basic_string<T, traits> string_type;
-      typedef leap::basic_string_view<T, traits> string_view_type;
+      using string_type = std::basic_string<T, traits>;
+      using string_view_type = leap::basic_string_view<T, traits>;
 
       struct Attribute
       {
@@ -536,10 +533,9 @@ namespace leap
         string_type value;
       };
 
-      typedef typename std::vector<Attribute>::const_iterator const_iterator;
+      using const_iterator = typename std::vector<Attribute>::const_iterator;
 
     public:
-      basic_sapentry();
 
       bool defined(string_view_type name) const;
 
@@ -561,6 +557,7 @@ namespace leap
       void clear();
 
       void add(string_type name, string_type value);
+      void insert(size_t index, string_type name, string_type value);
 
       void push_substream(basic_sapstream<T, traits> const &stream);
 
@@ -576,15 +573,8 @@ namespace leap
       std::vector<Attribute> m_attributes;
   };
 
-  typedef basic_sapentry<char> sapentry;
-  typedef basic_sapentry<wchar_t> wsapentry;
-
-
-  //|///////////////////// sapentry::Constructor ////////////////////////////
-  template<typename T, class traits>
-  basic_sapentry<T, traits>::basic_sapentry()
-  {
-  }
+  using sapentry = basic_sapentry<char>;
+  using wsapentry = basic_sapentry<wchar_t>;
 
 
   //|///////////////////// sapentry::clear //////////////////////////////////
@@ -602,6 +592,14 @@ namespace leap
   void basic_sapentry<T, traits>::add(string_type name, string_type value)
   {
     m_attributes.push_back({ std::move(name), std::move(value) });
+  }
+
+
+  //|///////////////////// sapentry::insert /////////////////////////////////
+  template<typename T, class traits>
+  void basic_sapentry<T, traits>::insert(size_t index, string_type name, string_type value)
+  {
+    m_attributes.insert(m_attributes.begin() + index, { std::move(name), std::move(value) });
   }
 
 
@@ -685,8 +683,8 @@ namespace leap
       ~basic_issapstream();
   };
 
-  typedef basic_issapstream<char> issapstream;
-  typedef basic_issapstream<wchar_t> iwssapstream;
+  using issapstream = basic_issapstream<char>;
+  using iwssapstream = basic_issapstream<wchar_t>;
 
 
   //|///////////////////// issapstream::Constructor /////////////////////////
@@ -717,19 +715,19 @@ namespace leap
       ~basic_ifsapstream();
   };
 
-  typedef basic_ifsapstream<char> ifsapstream;
-  typedef basic_ifsapstream<wchar_t> wifsapstream;
+  using ifsapstream = basic_ifsapstream<char>;
+  using wifsapstream = basic_ifsapstream<wchar_t>;
 
 
   //|///////////////////// ifsapstream::Constructor /////////////////////////
   template<typename T, class traits>
   basic_ifsapstream<T, traits>::basic_ifsapstream(T const *filename, std::ios::openmode mode)
   {
-    std::basic_filebuf<T, traits> *filebuf = new std::basic_filebuf<T, traits>;
+    auto filebuf = new std::basic_filebuf<T, traits>;
 
     filebuf->open(filename, mode | std::ios::binary);
 
-    this->rdbuf(filebuf);
+    basic_sapstream<T, traits>::rdbuf(filebuf);
 
     if (!filebuf->is_open())
       basic_sapstream<T, traits>::set_state(std::ios_base::badbit);
@@ -743,7 +741,4 @@ namespace leap
     delete basic_sapstream<T, traits>::rdbuf();
   }
 
-
 } // namespace
-
-#endif // SAPSTREAM_HH

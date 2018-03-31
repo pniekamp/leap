@@ -8,9 +8,10 @@
 // this copyright notice is retained
 //
 
-#ifndef POLYGONSIMPLIFYP_HH
-#define POLYGONSIMPLIFYP_HH
+#pragma once
 
+#include "lml.h"
+#include "point.h"
 
 //|--------------------- polygon simplify impl ------------------------------
 //|--------------------------------------------------------------------------
@@ -93,13 +94,21 @@ namespace leap { namespace lml { namespace PolygonSimplify
         std::tuple<int, void*, double, void*> ordering;
       };
 
-      typedef Node<T> node_type;
-      typedef std::vector<Node<T>> nodes_type;
-      typedef std::vector<Intersect<T>> intersects_type;
-      typedef std::vector<Event> events_type;
+      using node_type = Node<T>;
+      using nodes_type = std::vector<Node<T> >;
+      using intersects_type = std::vector<Intersect<T> >;
+      using events_type = std::vector<Event>;
 
-      class normal_iterator : public std::iterator<std::forward_iterator_tag, node_type>
+      class normal_iterator
       {
+        public:
+
+          using value_type = node_type;
+          using pointer = node_type *;
+          using reference = node_type &;
+          using difference_type = std::ptrdiff_t;
+          using iterator_category = std::forward_iterator_tag;
+
         public:
           normal_iterator() : m_node(nullptr) { }
           explicit normal_iterator(Node<T> *start) : m_head(start), m_node(start) { }
@@ -126,7 +135,7 @@ namespace leap { namespace lml { namespace PolygonSimplify
     public:
       Graph(size_t n);
       Graph(Graph const &) = delete;
-      Graph(Graph &&) = delete;
+      Graph(Graph &&) noexcept = delete;
 
       template<typename InputIterator>
       void push_p(InputIterator f, InputIterator l);
@@ -698,6 +707,3 @@ namespace leap { namespace lml { namespace PolygonSimplify
 
 
 } } } // namespace PolygonSimplify
-
-
-#endif

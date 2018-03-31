@@ -30,7 +30,7 @@ namespace leap { namespace crypto
 
 
   //|///////////////////// md5::Constructor /////////////////////////////////
-  md5::md5(md5 &&that)
+  md5::md5(md5 &&that) noexcept
     : state(nullptr)
   {
     swap(state, that.state);
@@ -114,11 +114,11 @@ namespace leap { namespace crypto
    */
   static const void *body(MD5_CTX *ctx, const void *data, unsigned long size)
   {
-    const uint8_t *ptr;
+    uint8_t const *ptr;
     uint32_t a, b, c, d;
     uint32_t saved_a, saved_b, saved_c, saved_d;
 
-    ptr = (const uint8_t *)data;
+    ptr = (uint8_t const *)data;
 
     a = ctx->a;
     b = ctx->b;
@@ -257,7 +257,7 @@ namespace leap { namespace crypto
       }
 
       memcpy(&ctx->buffer[used], data, available);
-      data = (const uint8_t *)data + available;
+      data = (uint8_t const *)data + available;
       size -= available;
       body(ctx, ctx->buffer, 64);
     }

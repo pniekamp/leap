@@ -22,9 +22,7 @@ using namespace std;
 using namespace leap;
 using namespace leap::lml;
 
-
 void InterpolatorTest();
-
 
 //|//////////////////// SimpleInterpolatorTest //////////////////////////////
 static void SimpleInterpolatorTest()

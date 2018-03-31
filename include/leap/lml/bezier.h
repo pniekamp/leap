@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef LMLBEZIER_HH
-#define LMLBEZIER_HH
+#pragma once
 
 #include <vector>
 #include <leap/lml/point.h>
@@ -18,7 +17,6 @@
 
 namespace leap { namespace lml
 {
-
   //|-------------------- Bezier --------------------------------------------
   //|------------------------------------------------------------------------
   /**
@@ -34,14 +32,14 @@ namespace leap { namespace lml
   {
     public:
 
-      typedef Point point_type;
-      typedef coord_type_t<Point> value_type;
-      typedef leap::lml::Vector<value_type, dim<Point>()> control_type;
+      using point_type = Point;
+      using value_type = coord_type_t<Point>;
+      using control_type = leap::lml::Vector<value_type, dim<Point>()>;
 
     public:
       Bezier() = default;
-      Bezier(std::vector<Point> points, value_type k = 0.25);
-      Bezier(std::vector<Point> points, std::vector<control_type> controls);
+      explicit Bezier(std::vector<Point> points, value_type k = 0.25);
+      explicit Bezier(std::vector<Point> points, std::vector<control_type> controls);
 
       Point value(float t) const;
 
@@ -207,5 +205,3 @@ namespace leap { namespace lml
 
 } // namespace lml
 } // namespace leap
-
-#endif

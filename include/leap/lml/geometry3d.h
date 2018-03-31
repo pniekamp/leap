@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef GEOMETRY3D_HH
-#define GEOMETRY3D_HH
+#pragma once
 
 #include "lml.h"
 #include <leap/lml/geometry.h>
@@ -29,7 +28,6 @@
 
 namespace leap { namespace lml
 {
-
   //|///////////////////// normal ///////////////////////////////////////////
   /// normal of ring (newell's method)
   template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 3>* = nullptr>
@@ -55,5 +53,3 @@ namespace leap { namespace lml
 
 } // namespace lml
 } // namespace leap
-
-#endif

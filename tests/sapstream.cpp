@@ -63,9 +63,9 @@ void SAPStreamTest()
     cout << "  " << entry["entrytype"] << " " << entry["entryid"] << "\n";
     cout << "  {\n";
 
-    for(sapentry::const_iterator i = entry.begin(); i != entry.end(); ++i)
+    for(auto &attr : entry)
     {
-      cout << "    " << i->name << " = " << i->value << "\n";
+      cout << "    " << attr.name << " = " << attr.value << "\n";
     }
 
     cout << "\n";
@@ -76,9 +76,9 @@ void SAPStreamTest()
       cout << "    " << subentry["entrytype"] << " " << subentry["entryid"] << "\n";
       cout << "    {\n";
 
-      for(sapentry::const_iterator i = subentry.begin(); i != subentry.end(); ++i)
+      for(auto &attr : subentry)
       {
-        cout << "      " << i->name << " = " << i->value << "\n";
+        cout << "      " << attr.name << " = " << attr.value << "\n";
       }
 
       cout << "    }\n";

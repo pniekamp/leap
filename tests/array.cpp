@@ -15,9 +15,7 @@ using namespace std;
 using namespace leap;
 using namespace leap::lml;
 
-
 void ArrayTest();
-
 
 //|//////////////////// ArrayBasicTest //////////////////////////////////////
 static void ArrayBasicTest()

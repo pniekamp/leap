@@ -12,8 +12,7 @@
 // this copyright notice is retained
 //
 
-#ifndef CONCURRENTQUEUE_HH
-#define CONCURRENTQUEUE_HH
+#pragma once
 
 #include <leap/threadcontrol.h>
 #include <memory>
@@ -40,7 +39,6 @@
 
 namespace leap { namespace threadlib
 {
-
   //|------------------------- ConcurrentQueue ------------------------------
   //|------------------------------------------------------------------------
   /**
@@ -59,7 +57,7 @@ namespace leap { namespace threadlib
     public:
       ConcurrentQueue();
       ConcurrentQueue(ConcurrentQueue const &) = delete;
-      ConcurrentQueue(ConcurrentQueue &&) = delete;
+      ConcurrentQueue(ConcurrentQueue &&) noexcept = delete;
 
       template<typename Q>
       bool push(Q &&object);
@@ -224,7 +222,7 @@ namespace leap { namespace threadlib
         public:
           virtual ~holderbase() = default;
 
-          virtual const std::type_info &type() const = 0;
+          virtual std::type_info const &type() const = 0;
       };
 
       template<typename T>
@@ -237,7 +235,7 @@ namespace leap { namespace threadlib
           {
           }
 
-          virtual std::type_info const &type() const
+          std::type_info const &type() const override
           {
             return typeid(T);
           }
@@ -264,7 +262,7 @@ namespace leap { namespace threadlib
           {
           }
 
-          virtual holderbase const *value(size_t index) const
+          holderbase const *value(size_t index) const override
           {
             return heldbase[index];
           }
@@ -341,6 +339,3 @@ namespace leap { namespace threadlib
   };
 
 } } // namespace
-
-
-#endif //ConcurrentQueue_HH

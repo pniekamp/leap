@@ -8,9 +8,11 @@
 // this copyright notice is retained
 //
 
-#ifndef VORONOI2DP_HH
-#define VORONOI2DP_HH
+#pragma once
 
+#include "lml.h"
+#include "point.h"
+#include "delaunay2d_p.h"
 
 //|--------------------- voronoi 2d diagram -------------------------------
 //|------------------------------------------------------------------------
@@ -76,13 +78,13 @@ namespace leap { namespace lml { namespace Voronoi2d
   {
     public:
 
-      typedef Cell<T> cell_type;
-      typedef std::vector<Cell<T>> cells_type;
+      using cell_type = Cell<T>;
+      using cells_type = std::vector<Cell<T> >;
 
     public:
       Voronoi();
       Voronoi(Voronoi const &) = delete;
-      Voronoi(Voronoi &&) = delete;
+      Voronoi(Voronoi &&) noexcept = delete;
 
       void add_site(T const &site);
 
@@ -143,7 +145,7 @@ namespace leap { namespace lml { namespace Voronoi2d
     {
       for(auto *edge = *i; edge < (*i)+4; edge += 2)
       {
-        Cell<T> *cell = edge->org();
+        auto cell = edge->org();
 
         if (cell->visited)
           continue;
@@ -173,5 +175,3 @@ namespace leap { namespace lml { namespace Voronoi2d
   }
 
 } } } // namespace Voronoi2d
-
-#endif

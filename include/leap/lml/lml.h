@@ -8,8 +8,7 @@
 // this copyright notice is retained
 //
 
-#ifndef LEAPLML_HH
-#define LEAPLML_HH
+#pragma once
 
 #include <leap/util.h>
 
@@ -24,7 +23,6 @@
 
 namespace leap { namespace lml
 {
-
   // bring in some of the math utils
 
   using leap::fcmp;
@@ -51,5 +49,3 @@ namespace leap { namespace lml
   }
 
 } }
-
-#endif

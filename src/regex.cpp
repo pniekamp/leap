@@ -22,20 +22,8 @@ using namespace leap::regex;
 
 namespace leap { namespace regex
 {
-
   namespace RegExImpl
   {
-
-    //|--------------------- RegExContext ---------------------------------------
-    //|--------------------------------------------------------------------------
-
-    //|///////////////////// RegExContext::Constructor ////////////////////////////
-    RegExContext::RegExContext()
-    {
-    }
-
-
-
     //|--------------------- RegExState -----------------------------------------
     //|--------------------------------------------------------------------------
 
@@ -52,16 +40,15 @@ namespace leap { namespace regex
 
 
     //|///////////////////// RegExState::accept /////////////////////////////////
-    void RegExState::accept(RegExStateVisitor &visitor)
+    void RegExState::accept(RegExVisitor &visitor)
     {
       visitor.visit(*this);
 
-      for(size_t i = 0; i < substate.size(); ++i)
+      for(auto &state : substate)
       {
-        substate[i].accept(visitor);
+        state.accept(visitor);
       }
     }
-
 
 
     //|--------------------- RegExCommon ----------------------------------------
@@ -71,12 +58,6 @@ namespace leap { namespace regex
     RegExCommon::RegExCommon()
     {
       m_repeat = RepeatType::Once;
-    }
-
-
-    //|///////////////////// RegExCommon::Destructor ////////////////////////////
-    RegExCommon::~RegExCommon()
-    {
     }
 
 
@@ -270,12 +251,6 @@ namespace leap { namespace regex
     }
 
 
-    //|///////////////////// RegExFilter::Destructor ////////////////////////////
-    RegExFilter::~RegExFilter()
-    {
-    }
-
-
     //|///////////////////// RegExFilter::consider_one //////////////////////////
     bool RegExFilter::consider_one(const char *&pos, RegExState &state) const
     {
@@ -305,12 +280,6 @@ namespace leap { namespace regex
     }
 
 
-    //|///////////////////// RegExStartOfLine::Destructor ///////////////////////
-    RegExStartOfLine::~RegExStartOfLine()
-    {
-    }
-
-
     //|///////////////////// RegExStartOfLine::consider_one //////////////////////
     bool RegExStartOfLine::consider_one(const char *&pos, RegExState &state) const
     {
@@ -325,12 +294,6 @@ namespace leap { namespace regex
 
     //|///////////////////// RegExEndOfLine::Constructor ////////////////////////
     RegExEndOfLine::RegExEndOfLine()
-    {
-    }
-
-
-    //|///////////////////// RegExEndOfLine::Destructor /////////////////////////
-    RegExEndOfLine::~RegExEndOfLine()
     {
     }
 
@@ -354,11 +317,6 @@ namespace leap { namespace regex
       m_right = std::move(right);
     }
 
-
-    //|///////////////////// RegExAlternative::Destructor ///////////////////////
-    RegExAlternative::~RegExAlternative()
-    {
-    }
 
     //|///////////////////// RegExAlternative::set_repeat ///////////////////////
     void RegExAlternative::set_repeat(RepeatType const &repeat)
@@ -452,12 +410,6 @@ namespace leap { namespace regex
     }
 
 
-    //|///////////////////// RegExGroup::Destructor /////////////////////////////
-    RegExGroup::~RegExGroup()
-    {
-    }
-
-
     //|///////////////////// RegExGroup::consider_first /////////////////////////
     bool RegExGroup::consider_first(const char *&pos, RegExState &state) const
     {
@@ -473,12 +425,6 @@ namespace leap { namespace regex
 
     //|///////////////////// RegExCore::Constructor /////////////////////////////
     RegExCore::RegExCore()
-    {
-    }
-
-
-    //|///////////////////// RegExCore::Destructor //////////////////////////////
-    RegExCore::~RegExCore()
     {
     }
 
@@ -769,7 +715,7 @@ namespace leap { namespace regex
   //|--------------------- CaptureVisitor -------------------------------------
   //|--------------------------------------------------------------------------
 
-  class CaptureVisitor : public RegExImpl::RegExStateVisitor
+  class CaptureVisitor : public RegExImpl::RegExVisitor
   {
     public:
       CaptureVisitor(vector<leap::string_view> *groups)
@@ -777,7 +723,7 @@ namespace leap { namespace regex
         m_groups = groups;
       }
 
-      void visit(RegExImpl::RegExState &state)
+      void visit(RegExImpl::RegExState &state) override
       {
         if (state.capture == true && state.count != 0)
         {

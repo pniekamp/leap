@@ -8,12 +8,12 @@
 // this copyright notice is retained
 //
 
-#ifndef LMLEVALUATOR_HH
-#define LMLEVALUATOR_HH
+#pragma once
 
 #include <leap/util.h>
 #include <leap/stringview.h>
 #include <stdexcept>
+#include <cstdlib>
 #include <cassert>
 #include <cmath>
 
@@ -460,7 +460,7 @@ namespace leap { namespace lml
       while (pos < expression.size() && expression[pos] <= ' ')
         ++pos;
 
-      Operator tkop;
+      Operator tkop = {};
       TokenType tktype = TokenType::NoToken;
 
       size_t licnt = is_literal(expression.substr(pos));
@@ -535,7 +535,7 @@ namespace leap { namespace lml
         case TokenType::Literal:
 
           // TODO: implement with from_chars
-          operandstack.push({ atof(&expression[pos]) });
+          operandstack.push({ strtod(&expression[pos], nullptr) });
 
           nextop = OpType::InfixOp;
 
@@ -587,5 +587,3 @@ namespace leap { namespace lml
   }
 
 } } //namespace
-
-#endif // LMLEVALUATOR_HH
