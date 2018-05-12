@@ -13,7 +13,6 @@
 #include <leap/util.h>
 #include <leap/lml/vector.h>
 
-
 /**
  * \namespace leap::lml
  * \brief Leap Math Library containing mathmatical routines
@@ -28,7 +27,6 @@
 
 namespace leap { namespace lml
 {
-
   //|-------------------- Quaternion ----------------------------------------
   //|------------------------------------------------------------------------
   /**

@@ -115,7 +115,7 @@ namespace
 
         state.step = 3;
 
-        [[fallthrough]];
+        [[gnu::fallthrough]];
 
       case 3:
 
@@ -131,7 +131,7 @@ namespace
 
         state.step = 4;
 
-        [[fallthrough]];
+        [[gnu::fallthrough]];
 
       case 4:
 
@@ -148,7 +148,7 @@ namespace
 
         state.step = 5;
 
-        [[fallthrough]];
+        [[gnu::fallthrough]];
 
       case 5:
 
@@ -168,7 +168,7 @@ namespace
 
         state.step = 6;
 
-        [[fallthrough]];
+        [[gnu::fallthrough]];
 
       case 6:
 
@@ -269,7 +269,7 @@ namespace
 
         state.step = 1;
 
-        [[fallthrough]];
+        [[gnu::fallthrough]];
 
       case 1:
 
@@ -832,7 +832,7 @@ namespace leap { namespace socklib
 
             step = 1;
 
-            [[fallthrough]];
+            [[gnu::fallthrough]];
 
           case 1:
 
@@ -840,7 +840,7 @@ namespace leap { namespace socklib
 
             step = 2;
 
-            [[fallthrough]];
+            [[gnu::fallthrough]];
 
           case 2:
 

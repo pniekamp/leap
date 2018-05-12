@@ -65,7 +65,7 @@ void EvaluatorTest()
 
   check(scope, "false", false);
   check(scope, "true", true);
-  check(scope, "-2147483648", -2147483648);
+  check(scope, "-2147483647", -2147483647);
   check(scope, "2147483647", 2147483647);
   check(scope, "-0", 0);
   check(scope, "+0", 0);

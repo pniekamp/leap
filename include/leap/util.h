@@ -159,7 +159,7 @@ namespace leap
       {
         svbuf(string_view sv)
         {
-          setg(const_cast<char*>(sv.begin()), const_cast<char*>(sv.begin()), const_cast<char*>(sv.end()));
+          std::streambuf::setg(const_cast<char*>(sv.begin()), const_cast<char*>(sv.begin()), const_cast<char*>(sv.end()));
         }
       };
 
@@ -437,9 +437,8 @@ namespace leap
     using type = detail<i, IndexSequence>;
   };
 
-
   template<size_t i, size_t... Indices>
-  size_t get(index_sequence<Indices...>)
+  constexpr size_t get(index_sequence<Indices...>)
   {
     return get_index_sequence_impl<i, index_sequence<Indices...>>::type::value;
   }

@@ -223,8 +223,12 @@ namespace leap { namespace lml
     //|///////////////////// OcTree::normal_iterator ////////////////////////
     template<typename Item, size_t dimension, class box, typename Alloc>
     template<typename Iterator>
+#if _MSC_VER
+    typename basic_octree<Item, dimension, box, Alloc>::normal_iterator<Iterator> &basic_octree<Item, dimension, box, Alloc>::normal_iterator<Iterator>::operator++()
+#else
     typename basic_octree<Item, dimension, box, Alloc>::template normal_iterator<Iterator> &basic_octree<Item, dimension, box, Alloc>::normal_iterator<Iterator>::operator++()
-    {
+#endif
+  {
       if (m_descend)
       {
         m_node = &m_node->nodes[0];

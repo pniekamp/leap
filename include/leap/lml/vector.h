@@ -61,8 +61,42 @@ namespace leap { namespace lml
       template<typename V>
       VectorView &operator /=(V &&v) { assign(*this, *this / std::forward<V>(v)); return *this; }
 
+#if 0
+      constexpr T operator[](size_t i) const
+      {
+        if constexpr(constexpr())
+        {
+          T elements[sizeof(Vector)/sizeof(T)] = {};
+          __builtin_memcpy(elements, this, sizeof(elements));
+
+          return elements[i];
+        }
+        else
+        {
+          return *((T const *)this + i);
+        }
+      }
+
+//      constexpr T const &operator[](size_t i) const
+//      {
+//        template<typename V>
+//        using has_data_t = decltype(std::declval<V>().data());
+
+//        template<typename V>
+//        using has_array_t = decltype(std::declval<V>().data);
+
+//        if constexpr(std::experimental::is_detected<has_data_t, Vector>::value)
+//          return static_cast<Vector const *>(this)->data()[i];
+//        else if constexpr(std::experimental::is_detected<has_array_t, Vector>::value)
+//          return static_cast<Vector const *>(this)->data[i];
+//        else
+//          return *((T const *)this + i);
+//      }
+#else
       constexpr T const &operator[](size_t i) const { return *((T const *)this + i); }
-      constexpr T &operator[](size_t i) { return *((T*)this + i); }
+#endif
+
+      T &operator[](size_t i) { return *((T*)this + i); }
 
     protected:
       VectorView() = default;
@@ -76,7 +110,7 @@ namespace leap { namespace lml
 
   //|///////////////////// VectorView get ///////////////////////////////////
   template<size_t i, typename Vector, typename T, size_t... Indices>
-  constexpr auto const &get(VectorView<Vector, T, Indices...> const &v) noexcept
+  constexpr decltype(auto) get(VectorView<Vector, T, Indices...> const &v) noexcept
   {
     return v[get<i>(index_sequence<Indices...>())];
   }
@@ -84,9 +118,9 @@ namespace leap { namespace lml
 
   //|///////////////////// VectorView assign ////////////////////////////////
   template<typename Vector, typename T, size_t... Indices, size_t... Jndices>
-  constexpr void assign(VectorView<Vector, T, Indices...> &lhs, VectorView<Vector, T, Jndices...> const &rhs)
+  void assign(VectorView<Vector, T, Indices...> &lhs, VectorView<Vector, T, Jndices...> const &rhs)
   {
-    std::tie(lhs[Indices]...) = std::tie(rhs[Jndices]...);
+    std::tie(lhs[Indices]...) = std::make_tuple(rhs[Jndices]...);
   }
 
 

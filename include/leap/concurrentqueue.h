@@ -322,7 +322,7 @@ namespace leap { namespace threadlib
    *
   **/
 
-  class ArgPackOp : public std::unary_function<ArgPack, bool>
+  class ArgPackOp
   {
     public:
       ArgPackOp(int op)

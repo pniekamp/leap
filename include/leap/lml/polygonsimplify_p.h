@@ -18,7 +18,6 @@
 
 namespace leap { namespace lml { namespace PolygonSimplify
 {
-
   //////////////////////// less_xy //////////////////////////////////////////
   template<typename T>
   bool less_xy(T const &lhs, T const &rhs)

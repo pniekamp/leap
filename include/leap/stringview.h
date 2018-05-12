@@ -28,7 +28,6 @@
 
 namespace leap
 {
-
   //|-------------------- string_view ---------------------------------------
   //|------------------------------------------------------------------------
   /**
@@ -383,13 +382,13 @@ namespace leap
     return lhs.compare(rhs) == 0;
   }
 
-  template<typename T, class traits>
+  template<typename T, class traits, int = 1>
   constexpr bool operator ==(basic_string_view<T, traits> const &lhs, std::decay_t<basic_string_view<T, traits>> const &rhs)
   {
     return lhs.compare(rhs) == 0;
   }
 
-  template<typename T, class traits>
+  template<typename T, class traits, int = 2>
   constexpr bool operator ==(std::decay_t<basic_string_view<T, traits>> const &lhs, basic_string_view<T, traits> const &rhs)
   {
     return lhs.compare(rhs) == 0;
@@ -401,13 +400,13 @@ namespace leap
     return lhs.compare(rhs) != 0;
   }
 
-  template<typename T, class traits>
+  template<typename T, class traits, int = 1>
   constexpr bool operator !=(basic_string_view<T, traits> const &lhs, std::decay_t<basic_string_view<T, traits>> const &rhs)
   {
     return lhs.compare(rhs) != 0;
   }
 
-  template<typename T, class traits>
+  template<typename T, class traits, int = 2>
   constexpr bool operator !=(std::decay_t<basic_string_view<T, traits>> const &lhs, basic_string_view<T, traits> const &rhs)
   {
     return lhs.compare(rhs) != 0;
@@ -419,13 +418,13 @@ namespace leap
     return lhs.compare(rhs) < 0;
   }
 
-  template<typename T, class traits>
+  template<typename T, class traits, int = 1>
   constexpr bool operator <(basic_string_view<T, traits> const &lhs, std::decay_t<basic_string_view<T, traits>> const &rhs)
   {
     return lhs.compare(rhs) < 0;
   }
 
-  template<typename T, class traits>
+  template<typename T, class traits, int = 2>
   constexpr bool operator <(std::decay_t<basic_string_view<T, traits>> const &lhs, basic_string_view<T, traits> const &rhs)
   {
     return lhs.compare(rhs) < 0;

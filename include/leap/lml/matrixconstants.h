@@ -14,7 +14,6 @@
 #include <leap/lml/quaternion.h>
 #include <cmath>
 
-
 namespace leap { namespace lml
 {
   /**
