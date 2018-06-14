@@ -51,7 +51,9 @@ namespace leap
       basic_string_view() = default;
       constexpr basic_string_view(T const *str);
       constexpr basic_string_view(T const *str, size_t len);
-      constexpr basic_string_view(std::basic_string<T, traits> const &str);
+
+      template<typename Alloc>
+      constexpr basic_string_view(std::basic_string<T, traits, Alloc> const &str);
 
       constexpr bool empty() const { return m_size == 0; }
 
@@ -116,7 +118,8 @@ namespace leap
   }
 
   template<typename T, class traits>
-  constexpr basic_string_view<T, traits>::basic_string_view(std::basic_string<T, traits> const &str)
+  template<typename Alloc>
+  constexpr basic_string_view<T, traits>::basic_string_view(std::basic_string<T, traits, Alloc> const &str)
     : m_ptr(str.data()), m_size(str.size())
   {
   }
