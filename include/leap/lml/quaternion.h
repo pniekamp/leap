@@ -49,7 +49,7 @@ namespace leap { namespace lml
       constexpr Quaternion(T w, T x, T y, T z);
 
       template<typename Vector, size_t... Indices, std::enable_if_t<sizeof...(Indices) == 3>* = nullptr>
-      explicit constexpr Quaternion(T w, VectorView<Vector, T, Indices...> const &vector);
+      constexpr Quaternion(T w, VectorView<Vector, T, Indices...> const &vector);
 
       template<typename Vector, size_t... Indices, std::enable_if_t<sizeof...(Indices) == 3>* = nullptr>
       explicit constexpr Quaternion(VectorView<Vector, T, Indices...> const &axis, T angle);
@@ -189,7 +189,7 @@ namespace leap { namespace lml
   template<typename T>
   constexpr Quaternion<T> conjugate(Quaternion<T> const &q)
   {
-    return Quaternion<T>(q.w, -q.x, -q.y, -q.z);
+    return { q.w, -q.x, -q.y, -q.z };
   }
 
 
@@ -198,7 +198,7 @@ namespace leap { namespace lml
   template<typename T>
   constexpr Quaternion<T> operator *(Quaternion<T> const &q1, Quaternion<T> const &q2)
   {
-    return Quaternion<T>(q1.w*q2.w - dot(q1.vector, q2.vector), q1.w*q2.vector + q2.w*q1.vector + cross(q1.vector, q2.vector));
+    return { q1.w*q2.w - dot(q1.vector, q2.vector), q1.w*q2.vector + q2.w*q1.vector + cross(q1.vector, q2.vector) };
   }
 
 
@@ -207,7 +207,7 @@ namespace leap { namespace lml
   template<typename Vector, typename T, size_t... Indices, std::enable_if_t<sizeof...(Indices) == 3>* = nullptr>
   constexpr Vector operator *(Quaternion<T> const &q, VectorView<Vector, T, Indices...> const &v)
   {
-    auto result = (q * Quaternion<T>(0, get<0>(v), get<1>(v), get<2>(v)) * conjugate(q));
+    auto result = (q * Quaternion<T>(0, v) * conjugate(q));
 
     return { result.x, result.y, result.z };
   }
@@ -222,7 +222,7 @@ namespace leap { namespace lml
 
     auto axis = orthogonal(u, v);
 
-    return normalise(Quaternion<T>(1 + costheta, get<0>(axis), get<1>(axis), get<2>(axis)));
+    return normalise(Quaternion<T>(1 + costheta, axis));
   }
 
 

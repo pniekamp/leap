@@ -237,6 +237,51 @@ namespace leap { namespace lml
    * @{
   **/
 
+  //|///////////////////// translate ////////////////////////////////////////
+  /// translate a bound
+  template<typename Bound, typename T, size_t IStride, size_t... Indices, typename Vector,size_t... Kndices>
+  auto translate(BoundView<Bound, T, IStride, Indices...> const &b, VectorView<Vector, T, Kndices...> const &v)
+  {
+    return Bound({ (b[0][Indices] + v[Kndices])... }, { (b[1][Indices] + v[Kndices])... });
+  }
+
+
+  //|///////////////////// scale ////////////////////////////////////////////
+  /// scales a bound
+  template<typename Bound, typename T, size_t IStride, size_t... Indices, typename S, std::enable_if_t<!is_vector_view<S>::value>* = nullptr>
+  auto scale(BoundView<Bound, T, IStride, Indices...> const &b, S const &s)
+  {
+    return Bound({ (b[0][Indices] * s)... }, { (b[1][Indices] * s)... });
+  }
+
+
+  //|///////////////////// scale ////////////////////////////////////////////
+  /// scales a bound
+  template<typename Bound, typename T, size_t IStride, size_t... Indices, typename Vector,size_t... Kndices>
+  auto scale(BoundView<Bound, T, IStride, Indices...> const &b, VectorView<Vector, T, Kndices...> const &v)
+  {
+    return Bound({ (b[0][Indices] * v[Kndices])... }, { (b[1][Indices] * v[Kndices])... });
+  }
+
+
+  //|///////////////////// grow /////////////////////////////////////////////
+  /// grow a bound
+  template<typename Bound, typename T, size_t IStride, size_t... Indices, typename S, std::enable_if_t<!is_vector_view<S>::value>* = nullptr>
+  auto grow(BoundView<Bound, T, IStride, Indices...> const &b, S const &s)
+  {
+    return Bound({ (b[0][Indices] - s)... }, { (b[1][Indices] + s)... });
+  }
+
+
+  //|///////////////////// grow /////////////////////////////////////////////
+  /// grow a bound
+  template<typename Bound, typename T, size_t IStride, size_t... Indices, typename Vector,size_t... Kndices>
+  auto grow(BoundView<Bound, T, IStride, Indices...> const &b, VectorView<Vector, T, Kndices...> const &v)
+  {
+    return Bound({ (b[0][Indices] - v[Kndices])... }, { (b[1][Indices] + v[Kndices])... });
+  }
+
+
   //|///////////////////// expand ///////////////////////////////////////////
   /// Expansion of two bounds (union)
   template<typename Bound, typename T, size_t IStride, size_t... Indices, size_t JStride, size_t... Jndices>

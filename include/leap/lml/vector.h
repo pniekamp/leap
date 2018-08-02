@@ -50,16 +50,16 @@ namespace leap { namespace lml
       Vector operator()() const { return { (*this)[Indices]... }; }
 
       template<typename V>
-      VectorView &operator +=(V &&v) { assign(*this, *this + std::forward<V>(v)); return *this; }
+      VectorView &operator +=(V &&v) { assign(*this, static_cast<Vector&>(*this) + std::forward<V>(v)); return *this; }
 
       template<typename V>
-      VectorView &operator -=(V &&v) { assign(*this, *this - std::forward<V>(v)); return *this; }
+      VectorView &operator -=(V &&v) { assign(*this, static_cast<Vector&>(*this) - std::forward<V>(v)); return *this; }
 
       template<typename V>
-      VectorView &operator *=(V &&v) { assign(*this, *this * std::forward<V>(v)); return *this; }
+      VectorView &operator *=(V &&v) { assign(*this, static_cast<Vector&>(*this) * std::forward<V>(v)); return *this; }
 
       template<typename V>
-      VectorView &operator /=(V &&v) { assign(*this, *this / std::forward<V>(v)); return *this; }
+      VectorView &operator /=(V &&v) { assign(*this, static_cast<Vector&>(*this) / std::forward<V>(v)); return *this; }
 
 #if 0
       constexpr T operator[](size_t i) const
@@ -312,12 +312,21 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// translate ////////////////////////////////////////
+  /// translate a vector
+  template<typename Vector, typename T, size_t... Indices, size_t... Jndices>
+  constexpr Vector translate(VectorView<Vector, T, Indices...> const &u, VectorView<Vector, T, Jndices...> const &v)
+  {
+    return { (u[Indices] + v[Jndices])... };
+  }
+
+
   //|///////////////////// scale ////////////////////////////////////////////
   /// scales a vector
   template<typename Vector, typename T, size_t... Indices, typename S>
-  constexpr Vector scale(VectorView<Vector, T, Indices...> const &v, S const &scalar)
+  constexpr Vector scale(VectorView<Vector, T, Indices...> const &v, S const &s)
   {
-    return { (v[Indices] * scalar)... };
+    return { (v[Indices] * s)... };
   }
 
 
@@ -619,7 +628,7 @@ namespace leap { namespace lml
   //|///////////////////// operator * ///////////////////////////////////////
   /// Vector multiplication by scalar
   template<typename Vector, typename T, size_t... Indices, typename S, std::enable_if_t<std::is_arithmetic<S>::value>* = nullptr>
-  constexpr Vector operator *(S s, VectorView<Vector, T, Indices...> const &v)
+  constexpr Vector operator *(S const &s, VectorView<Vector, T, Indices...> const &v)
   {
     return scale(v, s);
   }
@@ -628,7 +637,7 @@ namespace leap { namespace lml
   //|///////////////////// operator * ///////////////////////////////////////
   /// Vector multiplication by scalar
   template<typename Vector, typename T, size_t... Indices, typename S, std::enable_if_t<std::is_arithmetic<S>::value>* = nullptr>
-  constexpr Vector operator *(VectorView<Vector, T, Indices...> const &v, S s)
+  constexpr Vector operator *(VectorView<Vector, T, Indices...> const &v, S const &s)
   {
     return scale(v, s);
   }
@@ -637,7 +646,7 @@ namespace leap { namespace lml
   //|///////////////////// operator / ///////////////////////////////////////
   /// Vector division by scalar
   template<typename Vector, typename T, size_t... Indices, typename S, std::enable_if_t<std::is_arithmetic<S>::value>* = nullptr>
-  constexpr Vector operator /(VectorView<Vector, T, Indices...> const &v, S s)
+  constexpr Vector operator /(VectorView<Vector, T, Indices...> const &v, S const &s)
   {
     return scale(v, T(1) / s);
   }

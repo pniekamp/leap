@@ -104,6 +104,21 @@ void TestBound()
 
   if (!intersects(B, make_bound(Vector2(0.0, 20.0), 10.0)))
     cout << "** Should Overlap top\n";
+
+  if (translate(B, Vector2(5.0, 7.0)) != Bound2d({ -5.0, -3.0 }, { 15.0, 17.0 }))
+    cout << "** Wrong Bound translate\n";
+
+  if (scale(B, 2) != Bound2d({ -20.0, -20.0 }, { 20.0, 20.0 }))
+    cout << "** Wrong Bound scalar scale\n";
+
+  if (scale(B, Vector2(2.0, 3.0)) != Bound2d({ -20.0, -30.0 }, { 20.0, 30.0 }))
+    cout << "** Wrong Bound vector scale\n";
+
+  if (grow(B, 2) != Bound2d({ -12.0, -12.0 }, { 12.0, 12.0 }))
+    cout << "** Wrong Bound scalar grow\n";
+
+  if (grow(B, Vector2(2.0, 3.0)) != Bound2d({ -12.0, -13.0 }, { 12.0, 13.0 }))
+    cout << "** Wrong Bound vector grow\n";
 }
 
 

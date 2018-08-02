@@ -244,13 +244,13 @@ namespace leap { namespace lml
   //|///////////////////// scale ////////////////////////////////////////////
   /// scale a matrix
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B, typename S>
-  Matrix<T, M, N, B> scale(Matrix<T, M, N, B> const &m, S const &scalar)
+  Matrix<T, M, N, B> scale(Matrix<T, M, N, B> const &m, S const &s)
   {
     Matrix<T, M, N, B> result;
 
     for(size_t i = 0; i < M; ++i)
       for(size_t j = 0; j < N; ++j)
-        result(i, j) = m(i, j) * scalar;
+        result(i, j) = m(i, j) * s;
 
     return result;
   }
@@ -430,7 +430,7 @@ namespace leap { namespace lml
   //|///////////////////// operator * ///////////////////////////////////////
   /// Matrix multiplication by scalar
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B, typename S, std::enable_if_t<std::is_arithmetic<S>::value>* = nullptr>
-  Matrix<T, M, N, B> operator *(S s, Matrix<T, M, N, B> const &m)
+  Matrix<T, M, N, B> operator *(S const &s, Matrix<T, M, N, B> const &m)
   {
     return scale(m, s);
   }
@@ -439,7 +439,7 @@ namespace leap { namespace lml
   //|///////////////////// operator * ///////////////////////////////////////
   /// Matrix multiplication by scalar
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B, typename S, std::enable_if_t<std::is_arithmetic<S>::value>* = nullptr>
-  Matrix<T, M, N, B> operator *(Matrix<T, M, N, B> const &m, S s)
+  Matrix<T, M, N, B> operator *(Matrix<T, M, N, B> const &m, S const &s)
   {
     return scale(m, s);
   }
@@ -448,7 +448,7 @@ namespace leap { namespace lml
   //|///////////////////// operator / ///////////////////////////////////////
   /// Matrix division by scalar
   template<typename T, size_t M, size_t N, template<typename, size_t, size_t> class B, typename S, std::enable_if_t<std::is_arithmetic<S>::value>* = nullptr>
-  Matrix<T, M, N, B> operator /(Matrix<T, M, N, B> const &m, S s)
+  Matrix<T, M, N, B> operator /(Matrix<T, M, N, B> const &m, S const &s)
   {
     return scale(m, T(1) / s);
   }

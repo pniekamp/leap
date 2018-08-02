@@ -638,6 +638,19 @@ namespace leap
   }
 
 
+  //|//////////// frac /////////////////////////////////////////////////////
+  /**
+   * \brief fractional part
+   * \ingroup leaputil
+  **/
+
+  template<typename T, std::enable_if_t<std::is_scalar<T>::value>* = nullptr>
+  constexpr T frac(T value)
+  {
+    return value - std::trunc(value);
+  }
+
+
 #if _MSVC_LANG < 201703
   //|//////////// clamp /////////////////////////////////////////////////////
   /**
