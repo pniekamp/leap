@@ -280,7 +280,6 @@ namespace
 
 namespace leap { namespace socklib
 {
-
   //|--- Socket Subsystem Functions ---
   //|
 
@@ -356,27 +355,6 @@ namespace leap { namespace socklib
     return n;
   }
 
-
-  //|///////////////////// select ///////////////////////////////////////////
-  static bool select(int timeout, SOCKET readfd, SOCKET writefd)
-  {
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    if (readfd != INVALID_SOCKET)
-      FD_SET(readfd, &readfds);
-
-    fd_set writefds;
-    FD_ZERO(&writefds);
-    if (writefd != INVALID_SOCKET)
-      FD_SET(writefd, &writefds);
-
-    timeval t;
-    t.tv_sec = timeout / 1000;
-    t.tv_usec = (timeout % 1000) * 1000;
-
-    return (::select(max(readfd, writefd)+1, &readfds, &writefds, 0, &t) != 0);
-  }
-
   //|///////////////////// setacceptall /////////////////////////////////////
   static void setacceptall(SOCKET socket)
   {
@@ -412,7 +390,6 @@ namespace leap { namespace socklib
 
   //|--------------------- SocketBase ---------------------------------------
   //|------------------------------------------------------------------------
-
 
   //|///////////////////// SocketBase::Constructor //////////////////////////
   SocketBase::SocketBase()
@@ -535,8 +512,6 @@ namespace leap { namespace socklib
 
   //|--------------------- StreamSocket -------------------------------------
   //|------------------------------------------------------------------------
-
-  constexpr size_t StreamSocket::kSocketBufferSize;
 
   //|///////////////////// StreamSocket::Constructor ////////////////////////
   StreamSocket::StreamSocket()
@@ -670,23 +645,43 @@ namespace leap { namespace socklib
     // Send the data
     //
 
-    ssize_t result = send(m_connectedsocket, (const char*)buffer, bytes, MSG_NOSIGNAL);
-
-    while (result > 0 && (size_t)result < bytes)
+    while (bytes != 0)
     {
-      bytes -= result;
-      buffer = (const char *)(buffer) + result;
+      ssize_t result = send(m_connectedsocket, (const char*)buffer, bytes, MSG_NOSIGNAL);
 
-      select(10000, -1, m_connectedsocket);
+      if (result > 0)
+      {
+        bytes -= result;
+        buffer = (const char *)(buffer) + result;
+      }
 
-      result = send(m_connectedsocket, (const char*)buffer, bytes, MSG_NOSIGNAL);
-    }
+      else if (result == SOCKET_ERROR)
+      {
+        auto reason = GetLastError();
 
-    if (result == SOCKET_ERROR)
-    {
-      m_errorcondition = GetLastError();
+        if (reason != EWOULDBLOCK)
+        {
+          m_errorcondition = reason;
 
-      throw socket_error("Socket Transmit Error (" + toa(m_errorcondition) + ")");
+          throw socket_error("Socket Transmit Error (" + toa(m_errorcondition) + ")");
+        }
+      }
+
+      if (bytes != 0)
+      {
+        fd_set readfds;
+        FD_ZERO(&readfds);
+
+        fd_set writefds;
+        FD_ZERO(&writefds);
+        FD_SET(m_connectedsocket, &writefds);
+
+        timeval t;
+        t.tv_sec = 0;
+        t.tv_usec = 100000;
+
+        select(m_connectedsocket + 1, &readfds, &writefds, 0, &t);
+      }
     }
   }
 
@@ -725,10 +720,10 @@ namespace leap { namespace socklib
     // Receive any data that is available
     //
 
-    ssize_t bytes = recv(m_connectedsocket, (char*)buffer, bufbytes, 0);
+    ssize_t result = recv(m_connectedsocket, (char*)buffer, bufbytes, 0);
 
     // check if we are no longer connected...
-    if (bytes == 0 || m_closesignal)
+    if (result == 0 || m_closesignal)
     {
       m_errorcondition = 0;
       m_status = SocketStatus::Cactus;
@@ -737,14 +732,14 @@ namespace leap { namespace socklib
     }
 
     // or an error occurred...
-    else if (bytes == SOCKET_ERROR)
+    else if (result == SOCKET_ERROR)
     {
-      auto result = GetLastError();
+      auto reason = GetLastError();
 
       // was it a fatal error that results in a disconnect ?
-      if (result != EMSGSIZE && result != EWOULDBLOCK)
+      if (reason != EMSGSIZE && reason != EWOULDBLOCK)
       {
-        m_errorcondition = result;
+        m_errorcondition = reason;
         m_status = SocketStatus::Cactus;
 
         return StreamState::Dead;
@@ -756,6 +751,8 @@ namespace leap { namespace socklib
       //
       // Got some data.. update the read buffer
       //
+
+      size_t bytes = result;
 
       ring_push(&m_buffer, &m_buffertail, nullptr, bytes);
 
@@ -783,7 +780,6 @@ namespace leap { namespace socklib
 
   //|--------------------- ServerSocket -------------------------------------
   //|------------------------------------------------------------------------
-
 
   //|///////////////////// ServerSocket::Constructor ////////////////////////
   ServerSocket::ServerSocket()
@@ -1106,7 +1102,6 @@ namespace leap { namespace socklib
   //|--------------------- ClientSocket -------------------------------------
   //|------------------------------------------------------------------------
 
-
   //|///////////////////// ClientSocket::Constructor ////////////////////////
   ClientSocket::ClientSocket()
   {
@@ -1301,16 +1296,16 @@ namespace leap { namespace socklib
 
     freeaddrinfo(addr);
 
-    auto result = GetLastError();
+    auto reason = GetLastError();
 
-    if (result != EINPROGRESS && result != EWOULDBLOCK && result != EALREADY && result != EISCONN)
+    if (reason != EINPROGRESS && reason != EWOULDBLOCK && reason != EALREADY && reason != EISCONN)
     {
-      m_errorcondition = result;
+      m_errorcondition = reason;
 
       return false;
     }
 
-    return (result == EISCONN);
+    return (reason == EISCONN);
   }
 
 
@@ -1386,7 +1381,6 @@ namespace leap { namespace socklib
 
   //|--------------------- SocketPump ---------------------------------------
   //|------------------------------------------------------------------------
-
 
   //|///////////////////// SocketPump::Constructor //////////////////////////
   SocketPump::SocketPump()
@@ -1584,8 +1578,6 @@ namespace leap { namespace socklib
 
   //|--------------------- BroadcastSocket ----------------------------------
   //|------------------------------------------------------------------------
-
-  constexpr size_t BroadcastSocket::kSocketBufferSize;
 
   //|///////////////////// BroadcastSocket::Constructor /////////////////////
   BroadcastSocket::BroadcastSocket()
@@ -1799,7 +1791,7 @@ namespace leap { namespace socklib
         ring_pop(&m_buffer, &m_bufferhead, nullptr, bytes - n);
 
       // update count (compare-and-swap)
-      while (!m_buffercount.compare_exchange_weak(buffercount, buffercount - bytes - sizeof(packet_t)))
+      while (!m_buffercount.compare_exchange_weak(buffercount, buffercount - sizeof(sockaddr_t) - sizeof(size_t) - bytes))
         ;
     }
 
@@ -1884,17 +1876,17 @@ namespace leap { namespace socklib
 
     socklen_t addrlen = sizeof(addr);
 
-    ssize_t bytes = recvfrom(m_connectedsocket, (char*)buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrlen);
+    ssize_t result = recvfrom(m_connectedsocket, (char*)buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrlen);
 
     // an error occurred...
-    if (bytes == SOCKET_ERROR)
+    if (result == SOCKET_ERROR)
     {
-      auto result = GetLastError();
+      auto reason = GetLastError();
 
       // was it a fatal error that results in a disconnect ?
-      if (result != EWOULDBLOCK && result != ECONNRESET)
+      if (reason != EWOULDBLOCK && reason != ECONNRESET)
       {
-        m_errorcondition = result;
+        m_errorcondition = reason;
         m_status = SocketStatus::Cactus;
 
         m_activity.release();
@@ -1907,9 +1899,11 @@ namespace leap { namespace socklib
       // Got some data.. move to the read buffer
       //
 
+      size_t bytes = result;
+
       size_t bufbytes = m_buffer.size() - buffercount;
 
-      if (bytes + sizeof(packet_t) < bufbytes)
+      if (sizeof(sockaddr_t) + sizeof(size_t) + bytes < bufbytes)
       {
         size_t size = bytes;
 
@@ -1918,7 +1912,7 @@ namespace leap { namespace socklib
         ring_push(&m_buffer, &m_buffertail, buffer, size);
 
         // update count (compare-and-swap)
-        while (!m_buffercount.compare_exchange_weak(buffercount, buffercount + bytes + sizeof(packet_t)))
+        while (!m_buffercount.compare_exchange_weak(buffercount, buffercount + sizeof(sockaddr_t) + sizeof(size_t) + bytes))
           ;
       }
 

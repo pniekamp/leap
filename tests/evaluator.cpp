@@ -21,9 +21,9 @@ void EvaluatorTest();
 template<typename Scope>
 void check(Scope const &scope, const char *expression, double result)
 {
-  if (!fcmp(Expr::evaluate(scope, expression), result, 1e-6))
+  if (!fcmp(eval(scope, expression), result, 1e-6))
   {
-    cout << "** Eval Error " << expression << " == " << Expr::evaluate(scope, expression) << " != " << result << "\n";
+    cout << "** Eval Error " << expression << " == " << eval(scope, expression) << " != " << result << "\n";
   }
 }
 
@@ -45,10 +45,10 @@ void EvaluatorTest()
 
       if (name[0] == 'c' && name[1] == '[')
       {
-        return Expr::evaluate(*this, name.substr(2, name.size()-3));
+        return eval(*this, name.substr(2, name.size()-3));
       }
 
-      throw Expr::eval_error("Unknown Variable");
+      throw Expression::eval_error("Unknown Variable");
     }
 
   } scope;
@@ -79,7 +79,7 @@ void EvaluatorTest()
   check(scope, "-(1 + 0.78)", -1.78);
 
   check(scope, "1+2*3", 7);
-  check(scope, "1+2*3", 7);
+  check(scope, "1+(2*3)", 7);
   check(scope, "(1+2)*3", 9);
   check(scope, "(1+2)*(-3)", -9);
   check(scope, "2/4", 0.5);
@@ -139,8 +139,8 @@ void EvaluatorTest()
   check(scope, "c[7]", 7);
   check(scope, "c[2*x+1]", 5);
 
-  cout << "  pi = " << Expr::evaluate(scope, "pi") << "\n";
-  cout << "  2*pi = " << Expr::evaluate(scope, "2*pi") << "\n";
+  cout << "  pi = " << eval(scope, "pi") << "\n";
+  cout << "  2*pi = " << eval(scope, "2*pi") << "\n";
 
   cout << endl;
 }

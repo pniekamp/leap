@@ -48,30 +48,21 @@ namespace leap { namespace lml
    *
    *     Scope scope;
    *
-   *     double result = Expr::evaluate(scope, "15 + input * (8/9)");
+   *     double result = lml::eval(scope, "15 + input * (8/9)");
    *   }
    * \endcode
   **/
 
-  class Expr
+  class basic_expression
   {
     public:
 
-      class eval_error : public std::logic_error
-      {
-        public:
-          eval_error(std::string const &arg)
-            : logic_error(arg)
-          {
-          }
-      };
-
-      template<typename Scope>
-      static double evaluate(Scope const &scope, leap::string_view expression);
-
-    private:
-
       static constexpr size_t StackSize = 64;
+
+    public:
+
+      basic_expression() = default;
+      basic_expression(leap::string_view str);
 
       enum class TokenType
       {
@@ -93,12 +84,6 @@ namespace leap { namespace lml
         mod, div, mul, abs, min, max, floor, ceil, round, trunc, clamp, sin, cos, tan, asin, acos, atan, atan2, pow, sqrt, log, exp, log2, exp2, cond, plus, minus, leq, geq, le, ge, eq, neq, bnot, band, bor, open, close, comma
       };
 
-      static constexpr const char *Operators[8] = { "% / * abs min max floor ceil round trunc clamp sin cos tan asin acos atan atan2 pow sqrt log exp log2 exp2 if ", "+ - ", "<= >= < > ", "== != ", "! && || ", "( ) ", ", ", "" };
-
-      static constexpr size_t is_literal(leap::string_view str);
-      static constexpr size_t is_identifier(leap::string_view str);
-      static constexpr size_t is_operator(leap::string_view str, OpCode *code, size_t *order, size_t *precedence, OpType optype);
-
       struct Operator
       {
         OpCode code;
@@ -106,9 +91,38 @@ namespace leap { namespace lml
         size_t precedence;
       };
 
-      struct Operand
+      struct Node
       {
-        double value;
+        enum
+        {
+          Op,
+          Number,
+          Identifier
+
+        } type;
+
+        union
+        {
+          struct // Op
+          {
+            OpCode opcode;
+            size_t oporder;
+          };
+
+          struct // Number
+          {
+            double value;
+          };
+
+          struct // Identifier
+          {
+            size_t beg, len;
+          };
+        };
+
+        static Node op(OpCode opcode, size_t oporder) { Node node; node.type = Op; node.opcode = opcode; node.oporder = oporder; return node; }
+        static Node number(double value) { Node node; node.type = Number; node.value = value; return node; }
+        static Node identifier(size_t beg, size_t len) { Node node; node.type = Identifier; node.beg = beg; node.len = len; return node; }
       };
 
       template<typename T>
@@ -116,12 +130,12 @@ namespace leap { namespace lml
       {
         public:
 
-          size_t size()
+          bool empty() const
           {
-            return m_head;
+            return (m_head == 0);
           }
 
-          T peek()
+          T peek() const
           {
             return m_stack[m_head-1];
           }
@@ -145,445 +159,240 @@ namespace leap { namespace lml
           T m_stack[StackSize];
       };
 
-      static Operand eval_unary_operator(Operator op, SimpleStack<Operand> &operandstack);
-      static Operand eval_binary_operator(Operator op, SimpleStack<Operand> &operandstack);
-      static Operand eval_ternary_operator(Operator op, SimpleStack<Operand> &operandstack);
+      std::vector<Node> ast;
+  };
+
+  class Expression : public basic_expression
+  {
+    public:
+
+      class eval_error : public std::logic_error
+      {
+        public:
+          eval_error(std::string const &arg)
+            : logic_error(arg)
+          {
+          }
+      };
+
+     Expression() = default;
+     explicit Expression(std::string str);
+
+     std::string const &str() const { return m_str; }
+
+   private:
+
+     std::string m_str;
   };
 
 
-  //|////////////////////// Expr::is_literal //////////////////////////////////
-  constexpr size_t Expr::is_literal(leap::string_view str)
-  {
-    auto ch = str.begin();
-
-    while (ch != str.end() && (std::isdigit(*ch) || *ch == '.'))
-      ++ch;
-
-    if (ch != str.begin())
-    {
-      if (ch != str.end() && std::tolower(*ch) == 'e')
-      {
-        ++ch;
-
-        if (ch != str.end() && (*ch == '-' || *ch == '+'))
-          ++ch;
-
-        while (ch != str.end() && std::isdigit(*ch))
-          ++ch;
-      }
-    }
-
-    return ch - str.begin();
-  }
-
-
-  //|////////////////////// Expr::is_identifier /////////////////////////////
-  constexpr size_t Expr::is_identifier(leap::string_view str)
-  {
-    auto ch = str.begin();
-
-    if (ch != str.end() && (std::isalpha(*ch) || *ch == '@' || *ch == '$' || *ch == '_' || *ch == '{' || *ch == '}'))
-    {
-      ++ch;
-
-      while (ch != str.end() && (std::isdigit(*ch) || std::isalpha(*ch) || *ch == '@' || *ch == '$' || *ch == '_' || *ch == '.' || *ch == '{' || *ch == '}'))
-        ++ch;
-
-      if (ch != str.end() && *ch == '[')
-      {
-        ++ch;
-
-        int nest = 1;
-
-        while (ch != str.end() && nest > 0)
-        {
-          if (*ch == '[')
-            ++nest;
-
-          if (*ch == ']')
-            --nest;
-
-          ++ch;
-        }
-      }
-    }
-
-    return ch - str.begin();
-  }
-
-  //|////////////////////// Expr::is_operator /////////////////////////////////
-  constexpr size_t Expr::is_operator(leap::string_view str, OpCode *code, size_t *order, size_t *precedence, OpType optype)
-  {
-    *code = static_cast<OpCode>(0);
-
-    for(int i = 0; Operators[i][0] != 0; ++i)
-    {
-      for(int j = 0; Operators[i][j] != 0; ++j)
-      {
-        int k = 0;
-        while (Operators[i][j+k] != ' ')
-          ++k;
-
-        if (str.substr(0, k) == leap::string_view(Operators[i] + j, k))
-        {
-          *order = 0;
-          *precedence = i;
-
-          if (optype == OpType::InfixOp)
-          {
-            *order = 2;
-          }
-
-          if (optype == OpType::PrefixOp)
-          {
-            switch(*code)
-            {
-              case OpCode::plus:
-              case OpCode::minus:
-              case OpCode::abs:
-              case OpCode::floor:
-              case OpCode::ceil:
-              case OpCode::round:
-              case OpCode::trunc:
-              case OpCode::sin:
-              case OpCode::cos:
-              case OpCode::tan:
-              case OpCode::asin:
-              case OpCode::acos:
-              case OpCode::atan:
-              case OpCode::sqrt:
-              case OpCode::log:
-              case OpCode::exp:
-              case OpCode::log2:
-              case OpCode::exp2:
-              case OpCode::bnot:
-                *order = 1;
-                break;
-
-              case OpCode::min:
-              case OpCode::max:
-              case OpCode::atan2:
-              case OpCode::pow:
-                *order = 2;
-                break;
-
-              case OpCode::clamp:
-              case OpCode::cond:
-                *order = 3;
-                break;
-
-              default:
-                break;
-            }
-          }
-
-          return k;
-        }
-
-        j += k;
-
-        *code = static_cast<OpCode>(static_cast<int>(*code) + 1);
-      }
-    }
-
-    return 0;
-  }
-
-
-  //|////////////////////// Expr::eval_operator /////////////////////////////
-  inline Expr::Operand Expr::eval_unary_operator(Operator op, SimpleStack<Operand> &operandstack)
+  //|////////////////////// eval_operator ///////////////////////////////////
+  inline double eval_unary_operator(Expression::OpCode op, Expression::SimpleStack<double> &operandstack)
   {
     auto first = operandstack.pop();
 
-    switch (op.code)
+    switch (op)
     {
-      case OpCode::plus:
-        return { first.value };
+      case Expression::OpCode::plus:
+        return first;
 
-      case OpCode::minus:
-        return { -first.value };
+      case Expression::OpCode::minus:
+        return -first;
 
-      case OpCode::abs:
-        return { std::abs(first.value) };
+      case Expression::OpCode::abs:
+        return std::abs(first);
 
-      case OpCode::floor:
-        return { std::floor(first.value) };
+      case Expression::OpCode::floor:
+        return std::floor(first);
 
-      case OpCode::ceil:
-        return { std::ceil(first.value) };
+      case Expression::OpCode::ceil:
+        return std::ceil(first);
 
-      case OpCode::round:
-        return { std::round(first.value) };
+      case Expression::OpCode::round:
+        return std::round(first);
 
-      case OpCode::trunc:
-        return { std::trunc(first.value) };
+      case Expression::OpCode::trunc:
+        return std::trunc(first);
 
-      case OpCode::sin:
-        return { std::sin(first.value) };
+      case Expression::OpCode::sin:
+        return std::sin(first);
 
-      case OpCode::cos:
-        return { std::cos(first.value) };
+      case Expression::OpCode::cos:
+        return std::cos(first);
 
-      case OpCode::tan:
-        return { std::tan(first.value) };
+      case Expression::OpCode::tan:
+        return std::tan(first);
 
-      case OpCode::asin:
-        return { std::asin(first.value) };
+      case Expression::OpCode::asin:
+        return std::asin(first);
 
-      case OpCode::acos:
-        return { std::acos(first.value) };
+      case Expression::OpCode::acos:
+        return std::acos(first);
 
-      case OpCode::atan:
-        return { std::atan(first.value) };
+      case Expression::OpCode::atan:
+        return std::atan(first);
 
-      case OpCode::sqrt:
-        return { std::sqrt(first.value) };
+      case Expression::OpCode::sqrt:
+        return std::sqrt(first);
 
-      case OpCode::log:
-        return { std::log(first.value) };
+      case Expression::OpCode::log:
+        return std::log(first);
 
-      case OpCode::exp:
-        return { std::exp(first.value) };
+      case Expression::OpCode::exp:
+        return std::exp(first);
 
-      case OpCode::log2:
-        return { std::log2(first.value) };
+      case Expression::OpCode::log2:
+        return std::log2(first);
 
-      case OpCode::exp2:
-        return { std::exp2(first.value) };
+      case Expression::OpCode::exp2:
+        return std::exp2(first);
 
-      case OpCode::bnot:
-        return { double(fcmp(first.value, 0.0)) };
+      case Expression::OpCode::bnot:
+        return double(fcmp(first, 0.0));
 
       default:
-        throw eval_error("invalid operator");
+        throw Expression::eval_error("invalid operator");
     }
   }
 
 
-  //|////////////////////// Expr::eval_operator /////////////////////////////
-  inline Expr::Operand Expr::eval_binary_operator(Operator op, SimpleStack<Operand> &operandstack)
+  //|////////////////////// eval_operator ///////////////////////////////////
+  inline double eval_binary_operator(Expression::OpCode op, Expression::SimpleStack<double> &operandstack)
   {
     auto second = operandstack.pop();
     auto first = operandstack.pop();
 
-    switch (op.code)
+    switch (op)
     {
-      case OpCode::mod:
-        return { std::fmod(first.value, second.value) };
+      case Expression::OpCode::mod:
+        return std::fmod(first, second);
 
-      case OpCode::div:
-        return { first.value / second.value };
+      case Expression::OpCode::div:
+        return first / second;
 
-      case OpCode::mul:
-        return { first.value * second.value };
+      case Expression::OpCode::mul:
+        return first * second;
 
-      case OpCode::plus:
-        return { first.value + second.value };
+      case Expression::OpCode::plus:
+        return first + second;
 
-      case OpCode::minus:
-        return { first.value - second.value };
+      case Expression::OpCode::minus:
+        return first - second;
 
-      case OpCode::leq:
-        return { double(first.value <= second.value) };
+      case Expression::OpCode::leq:
+        return double(first <= second);
 
-      case OpCode::geq:
-        return { double(first.value >= second.value) };
+      case Expression::OpCode::geq:
+        return double(first >= second);
 
-      case OpCode::le:
-        return { double(first.value < second.value) };
+      case Expression::OpCode::le:
+        return double(first < second);
 
-      case OpCode::ge:
-        return { double(first.value > second.value) };
+      case Expression::OpCode::ge:
+        return double(first > second);
 
-      case OpCode::eq:
-        return { double(fcmp(first.value, second.value)) };
+      case Expression::OpCode::eq:
+        return double(fcmp(first, second));
 
-      case OpCode::neq:
-        return { double(!fcmp(first.value, second.value)) };
+      case Expression::OpCode::neq:
+        return double(!fcmp(first, second));
 
-      case OpCode::band:
-        return { double(!fcmp(first.value, 0.0) && !fcmp(second.value, 0.0)) };
+      case Expression::OpCode::band:
+        return double(!fcmp(first, 0.0) && !fcmp(second, 0.0));
 
-      case OpCode::bor:
-        return { double(!fcmp(first.value, 0.0) || !fcmp(second.value, 0.0)) };
+      case Expression::OpCode::bor:
+        return double(!fcmp(first, 0.0) || !fcmp(second, 0.0));
 
-      case OpCode::min:
-        return { std::min(first.value, second.value) };
+      case Expression::OpCode::min:
+        return std::min(first, second);
 
-      case OpCode::max:
-        return { std::max(first.value, second.value) };
+      case Expression::OpCode::max:
+        return std::max(first, second);
 
-      case OpCode::atan2:
-        return { std::atan2(first.value, second.value) };
+      case Expression::OpCode::atan2:
+        return std::atan2(first, second);
 
-      case OpCode::pow:
-        return { std::pow(first.value, second.value) };
+      case Expression::OpCode::pow:
+        return std::pow(first, second);
 
       default:
-        throw eval_error("invalid operator");
+        throw Expression::eval_error("invalid operator");
     }
   }
 
 
-  //|////////////////////// Expr::eval_operator ///////////////////////////////
-  inline Expr::Operand Expr::eval_ternary_operator(Operator op, SimpleStack<Operand> &operandstack)
+  //|////////////////////// eval_operator ///////////////////////////////////
+  inline double eval_ternary_operator(Expression::OpCode op, Expression::SimpleStack<double> &operandstack)
   {
     auto third = operandstack.pop();
     auto second = operandstack.pop();
     auto first = operandstack.pop();
 
-    switch (op.code)
+    switch (op)
     {
-      case OpCode::clamp:
-        return { clamp(first.value, second.value, third.value) };
+      case Expression::OpCode::clamp:
+        return clamp(first, second, third);
 
-      case OpCode::cond:
-        return { fcmp(first.value, 0.0) ? third.value : second.value };
+      case Expression::OpCode::cond:
+        return fcmp(first, 0.0) ? third : second;
 
       default:
-        throw eval_error("invalid operator");
+        throw Expression::eval_error("invalid operator");
     }
   }
 
-  //|////////////////////// Expr::evaluate //////////////////////////////////
+
   template<typename Scope>
-  double Expr::evaluate(Scope const &scope, leap::string_view expression)
+  double eval(Scope const &scope, basic_expression const &expression, leap::string_view text)
   {
-    SimpleStack<Operator> operatorstack;
-    SimpleStack<Operand> operandstack;
+    auto operands = basic_expression::SimpleStack<double>{};
 
-    size_t pos = 0;
-    OpType nextop = OpType::PrefixOp;
-
-    while (pos < expression.size())
+    for(auto &node : expression.ast)
     {
-      while (pos < expression.size() && expression[pos] <= ' ')
-        ++pos;
-
-      Operator tkop = {};
-      TokenType tktype = TokenType::NoToken;
-
-      size_t licnt = is_literal(expression.substr(pos));
-      size_t idcnt = is_identifier(expression.substr(pos));
-      size_t opcnt = is_operator(expression.substr(pos), &tkop.code, &tkop.order, &tkop.precedence, nextop);
-
-      size_t tklen = std::max({ opcnt, licnt, idcnt });
-
-      if (opcnt > 0 && opcnt >= idcnt)
-        tktype = TokenType::OpToken;
-
-      else if (licnt > 0)
-        tktype = TokenType::Literal;
-
-      else if (idcnt > 0)
-        tktype = TokenType::Identifier;
-
-      switch(tktype)
+      switch(node.type)
       {
-        case TokenType::OpToken:
+        case Expression::Node::Op:
 
-          while (true)
+          switch(node.oporder)
           {
-            if (nextop == OpType::PrefixOp)
-            {
-              operatorstack.push(tkop);
-
+            case 1:
+              operands.push(eval_unary_operator(node.opcode, operands));
               break;
-            }
 
-            if (operatorstack.size() == 0 || operatorstack.peek().precedence > tkop.precedence)
-            {
-              operatorstack.push(tkop);
-
+            case 2:
+              operands.push(eval_binary_operator(node.opcode, operands));
               break;
-            }
 
-            if (operatorstack.peek().code == OpCode::open)
-            {
-              if (tkop.code != OpCode::comma)
-                operatorstack.pop();
-
+            case 3:
+              operands.push(eval_ternary_operator(node.opcode, operands));
               break;
-            }
-
-            Operator op = operatorstack.pop();
-
-            if (operandstack.size() < op.order)
-              throw eval_error("invalid unwind");
-
-            switch(op.order)
-            {
-              case 1:
-                operandstack.push(eval_unary_operator(op, operandstack));
-                break;
-
-              case 2:
-                operandstack.push(eval_binary_operator(op, operandstack));
-                break;
-
-              case 3:
-                operandstack.push(eval_ternary_operator(op, operandstack));
-                break;
-            }
           }
 
-          if (tkop.code != OpCode::close)
-            nextop = OpType::PrefixOp;
-
           break;
 
-        case TokenType::Literal:
-
-          // TODO: implement with from_chars
-          operandstack.push({ strtod(&expression[pos], nullptr) });
-
-          nextop = OpType::InfixOp;
-
+        case Expression::Node::Number:
+          operands.push(node.value);
           break;
 
-        case TokenType::Identifier:
-
-          operandstack.push({ scope.lookup(leap::string_view(&expression[pos], tklen)) });
-
-          nextop = OpType::InfixOp;
-
-          break;
-
-        case TokenType::NoToken:
-
-          break;
-      }
-
-      pos += tklen;
-    }
-
-    while (operatorstack.size() > 0)
-    {
-      Operator op = operatorstack.pop();
-
-      if (operandstack.size() < op.order)
-        throw eval_error("invalid unwind");
-
-      switch(op.order)
-      {
-        case 1:
-          operandstack.push(eval_unary_operator(op, operandstack));
-          break;
-
-        case 2:
-          operandstack.push(eval_binary_operator(op, operandstack));
-          break;
-
-        case 3:
-          operandstack.push(eval_ternary_operator(op, operandstack));
+        case Expression::Node::Identifier:
+          operands.push(scope.lookup(text.substr(node.beg, node.len)));
           break;
       }
     }
 
-    if (operatorstack.size() != 0 || operandstack.size() != 1)
-      throw eval_error("invalid unwind");
+    return operands.pop();
+  }
 
-    return operandstack.pop().value;
+  template<typename Scope>
+  double eval(Scope const &scope, leap::string_view str)
+  {
+    return eval(scope, basic_expression(str), str);
+  }
+
+  template<typename Scope>
+  double eval(Scope const &scope, Expression const &expression)
+  {
+    return eval(scope, expression, expression.str());
   }
 
 } } //namespace

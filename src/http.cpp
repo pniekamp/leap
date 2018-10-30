@@ -156,7 +156,7 @@ namespace
 
         while (state.remaining != 0)
         {
-          size_t bytes = min(state.remaining, StreamSocket::kSocketBufferSize);
+          size_t bytes = min(state.remaining, size_t(4096));
 
           if (socket.bytes_available() < bytes)
             return false;
@@ -307,13 +307,23 @@ namespace
     {
       frame[1] |= 126;
       frame[2] = (bytes & 0xFF00) >> 8;
-      frame[3] = (bytes & 0x00FF);
+      frame[3] = (bytes & 0x00FF) >> 0;
 
       len = 4;
     }
     else
     {
-      throw SocketBase::socket_error("Large Frames Not Supported");
+      frame[1] |= 127;
+      frame[2] = (bytes & 0xFF00000000000000) >> 56;
+      frame[2] = (bytes & 0x00FF000000000000) >> 48;
+      frame[3] = (bytes & 0x0000FF0000000000) >> 40;
+      frame[4] = (bytes & 0x000000FF00000000) >> 32;
+      frame[5] = (bytes & 0x00000000FF000000) >> 24;
+      frame[6] = (bytes & 0x0000000000FF0000) >> 16;
+      frame[7] = (bytes & 0x000000000000FF00) >> 8;
+      frame[8] = (bytes & 0x00000000000000FF) >> 0;
+
+      len = 9;
     }
 
     if (masked)
@@ -354,16 +364,21 @@ namespace
 
     if (length == 126)
     {
-      uint16_t len;
+      uint8_t len[2];
 
       socket.wait_on_bytes(2);
       socket.receive(&len, 2);
 
-      length = ntohs(len);
+      length = ((uint16_t)len[0] << 8) + ((uint16_t)len[1] << 0);
     }
     else if (length == 127)
     {
-      throw SocketBase::socket_error("Large Frames Not Supported");
+      uint8_t len[8];
+
+      socket.wait_on_bytes(8);
+      socket.receive(&len, 8);
+
+      length = ((uint64_t)len[0] << 56) + ((uint64_t)len[1] << 48) + ((uint64_t)len[2] << 40) + ((uint64_t)len[3] << 32) + ((uint64_t)len[4] << 24) + ((uint64_t)len[5] << 16) + ((uint64_t)len[6] << 8) + ((uint64_t)len[7] << 0);
     }
 
     uint8_t maskkey[4];

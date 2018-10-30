@@ -189,10 +189,6 @@ namespace leap { namespace socklib
   {
     public:
 
-      static constexpr size_t kSocketBufferSize = 16384;
-
-    public:
-
       size_t bytes_available() const;
 
       bool wait_on_bytes(size_t minbytes = 1, int timeout = -1);
@@ -231,7 +227,7 @@ namespace leap { namespace socklib
       size_t m_bufferhead;
       size_t m_buffertail;
       std::atomic<size_t> m_buffercount;
-      std::array<uint8_t, kSocketBufferSize> m_buffer;
+      std::array<uint8_t, 16384> m_buffer;
 
       std::atomic<bool> m_closesignal;
   };
@@ -412,10 +408,6 @@ namespace leap { namespace socklib
   class BroadcastSocket : public SocketBase
   {
     public:
-
-      static constexpr size_t kSocketBufferSize = 8192;
-
-    public:
       BroadcastSocket();
       explicit BroadcastSocket(unsigned int port, const char *options = "");
       explicit BroadcastSocket(unsigned int address, unsigned int port, const char *options = "");
@@ -441,19 +433,10 @@ namespace leap { namespace socklib
 
     private:
 
-      struct packet_t
-      {
-        sockaddr_in addr;
-
-        size_t bytes;
-
-        uint8_t data[1];
-      };
-
       size_t m_bufferhead;
       size_t m_buffertail;
       std::atomic<size_t> m_buffercount;
-      std::array<uint8_t, kSocketBufferSize> m_buffer;
+      std::array<uint8_t, 16384> m_buffer;
 
     private:
 

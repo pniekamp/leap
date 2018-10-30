@@ -58,6 +58,7 @@ namespace leap
       constexpr bool empty() const { return m_size == 0; }
 
       constexpr size_t size() const { return m_size; }
+      constexpr size_t length() const { return m_size; }
       constexpr T const *data() const { return m_ptr; }
 
       constexpr T const &operator[](size_t i) const { return m_ptr[i]; }
