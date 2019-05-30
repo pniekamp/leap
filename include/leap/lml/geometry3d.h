@@ -30,12 +30,17 @@ namespace leap { namespace lml
 {
   //|///////////////////// normal ///////////////////////////////////////////
   /// normal of ring (newell's method)
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 3>* = nullptr>
-  auto normal(InputIterator f, InputIterator l)
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 3>* = nullptr>
+  auto normal(Ring const &ring)
   {
-    auto result = Vector<decltype(get<0>(*f)*get<0>(*l)), 3>(0);
+    using std::begin;
+    using std::end;
+    using std::prev;
+    using std::next;
 
-    for(InputIterator ic = f, ip = std::prev(l); ic != l; ip = ic, ++ic)
+    auto result = Vector<decltype(get<0>(*begin(ring))*get<0>(*end(ring))), 3>(0);
+
+    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
     {
       result(0) += (get<1>(*ip) - get<1>(*ic)) * (get<2>(*ip) + get<2>(*ic));
       result(1) += (get<2>(*ip) - get<2>(*ic)) * (get<0>(*ip) + get<0>(*ic));
@@ -43,12 +48,6 @@ namespace leap { namespace lml
     }
 
     return normalise(result);
-  }
-
-  template<typename Ring, std::enable_if_t<dim<typename Ring::value_type>() == 3>* = nullptr>
-  auto normal(Ring const &ring)
-  {
-    return normal(ring.begin(), ring.end());
   }
 
 } // namespace lml

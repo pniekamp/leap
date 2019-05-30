@@ -407,7 +407,7 @@ namespace leap { namespace lml
 
   //|///////////////////// nearest_in_bound /////////////////////////////////
   /// nearest point on or within bound
-  template<typename Bound, typename T, size_t Stride, size_t... Indices, typename Point, std::enable_if_t<dim<Point>() == sizeof...(Indices)>* = nullptr>
+  template<typename Bound, typename T, size_t Stride, size_t... Indices, typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == sizeof...(Indices)>* = nullptr>
   Point nearest_in_bound(BoundView<Bound, T, Stride, Indices...> const &bound, Point const &pt)
   {
     return { clamp(get<Indices>(pt), bound[0][Indices], bound[1][Indices])... };

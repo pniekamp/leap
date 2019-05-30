@@ -457,7 +457,7 @@ namespace leap { namespace socklib
   //-------------------------- Functions -------------------------------------
   //--------------------------------------------------------------------------
 
-  bool readline(StreamSocket &socket, char *buffer, int n, int timeout = 0);
+  bool readline(StreamSocket &socket, char *buffer, size_t n, int timeout = 0);
 
   std::vector<interface_t> interfaces();
 

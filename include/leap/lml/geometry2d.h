@@ -32,67 +32,79 @@ namespace leap { namespace lml
   template<typename Ring, typename enable = void>
   struct ring_traits;
 
-  // Ring Traits (Vector)
-  template<typename T>
-  struct ring_traits<std::vector<T>, std::enable_if_t<dim<T>() != 0>>
+  // Ring Traits (std::vector<Point>)
+  template<typename Point>
+  struct ring_traits<std::vector<Point>, std::enable_if_t<point_traits<Point>::dimension != 0>>
   {
-    static constexpr size_t dimension = dim<T>();
+	static constexpr size_t dimension = dim<Point>();
 
     static constexpr int orientation = 1;
   };
 
 
-  //|///////////////////// area /////////////////////////////////////////////
-  /// area of xy ring
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 2>* = nullptr>
-  auto area(InputIterator f, InputIterator l)
+  //|///////////////////// dim //////////////////////////////////////////////
+  /// dimension of ring
+  template<typename Ring>
+  constexpr auto dim() -> decltype(ring_traits<Ring>::dimension)
   {
-    auto result = decltype(get<0>(*f)*get<0>(*l))(0);
-
-    for(InputIterator ic = f, ip = std::prev(l); ic != l; ip = ic, ++ic)
-    {
-      result += get<0>(*ip)*get<1>(*ic) - get<0>(*ic)*get<1>(*ip);
-    }
-
-    return std::abs(result) / 2;
+	  return ring_traits<Ring>::dimension;
   }
 
-  template<typename Ring, std::enable_if_t<ring_traits<Ring>::dimension == 2>* = nullptr>
+
+  //|///////////////////// area /////////////////////////////////////////////
+  /// area of xy ring
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
   auto area(Ring const &ring)
   {
-    return area(ring.begin(), ring.end());
+    using std::begin;
+    using std::end;
+    using std::prev;
+    using std::next;
+
+    auto result = decltype(get<0>(*begin(ring))*get<0>(*end(ring)))(0);
+
+    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+	{
+	  result += get<0>(*ip) * get<1>(*ic) - get<0>(*ic) * get<1>(*ip);
+	}
+
+	return std::abs(result) / 2;
   }
 
 
   //|///////////////////// orientation //////////////////////////////////////
   /// orientation of xy ring
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 2>* = nullptr>
-  auto orientation(InputIterator f, InputIterator l)
-  {
-    auto result = decltype(get<0>(*f)*get<0>(*l))(0);
-
-    for(InputIterator ic = f, ip = std::prev(l); ic != l; ip = ic, ++ic)
-    {
-      result += get<0>(*ip)*get<1>(*ic) - get<0>(*ic)*get<1>(*ip);
-    }
-
-    return fcmp(result, decltype(result)(0)) ? 0 : result;
-  }
-
-  template<typename Ring, std::enable_if_t<ring_traits<Ring>::dimension == 2>* = nullptr>
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
   auto orientation(Ring const &ring)
   {
-    return orientation(ring.begin(), ring.end());
+    using std::begin;
+    using std::end;
+    using std::prev;
+    using std::next;
+
+    auto result = decltype(get<0>(*begin(ring))*get<0>(*end(ring)))(0);
+
+    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+	{
+	  result += get<0>(*ip) * get<1>(*ic) - get<0>(*ic) * get<1>(*ip);
+	}
+
+	return fcmp(result, decltype(result)(0)) ? 0 : result;
   }
 
 
   //|///////////////////// contains /////////////////////////////////////////
   /// ring contains point
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 2>* = nullptr>
-  bool contains(InputIterator f, InputIterator l, typename std::iterator_traits<InputIterator>::value_type const &pt)
+  template<typename Ring, typename Point, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
+  bool contains(Ring const &ring, Point const &pt)
   {
+    using std::begin;
+    using std::end;
+    using std::prev;
+    using std::next;
+
     int count = 0;
-    for(InputIterator ic = f, ip = std::prev(l); ic != l; ip = ic, ++ic)
+    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
     {
       auto x1 = get<0>(*ip);
       auto x2 = get<0>(*ic);
@@ -101,7 +113,7 @@ namespace leap { namespace lml
 
       if ((y1 <= get<1>(pt) && y2 > get<1>(pt)) || (y1 > get<1>(pt) && y2 <= get<1>(pt)))
       {
-        if (get<0>(pt) < x1 + (get<1>(pt)  - y1) / (y2 - y1) * (x2 - x1))
+        if (get<0>(pt) < x1 + (get<1>(pt) - y1) / (y2 - y1) * (x2 - x1))
           ++count;
       }
     }
@@ -109,23 +121,22 @@ namespace leap { namespace lml
     return count & 1;
   }
 
-  template<typename Ring, typename Point, std::enable_if_t<ring_traits<Ring>::dimension == 2>* = nullptr>
-  bool contains(Ring const &ring, Point const &pt)
-  {
-    return contains(ring.begin(), ring.end(), pt);
-  }
-
 
   //|///////////////////// nearest_on_polygon ///////////////////////////////
   /// nearest point on ring edge
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 2>* = nullptr>
-  auto nearest_on_polygon(InputIterator f, InputIterator l, typename std::iterator_traits<InputIterator>::value_type const &pt)
+  template<typename Ring, typename Point, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
+  auto nearest_on_polygon(Ring const &ring, Point const &pt)
   {
-    auto result = typename std::iterator_traits<InputIterator>::value_type();
+    using std::begin;
+    using std::end;
+    using std::prev;
+    using std::next;
+
+    auto result = Point{};
 
     auto mindist = std::numeric_limits<decltype(distsqr(result, result))>::max();
 
-    for(InputIterator ic = f, ip = std::prev(l); ic != l; ip = ic, ++ic)
+    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
     {
       auto np = nearest_on_segment(*ip, *ic, pt);
 
@@ -141,38 +152,29 @@ namespace leap { namespace lml
     return result;
   }
 
-  template<typename Ring, typename Point, std::enable_if_t<ring_traits<Ring>::dimension == 2>* = nullptr>
-  auto nearest_on_polygon(Ring const &ring, Point const &pt)
-  {
-    return nearest_on_polygon(ring.begin(), ring.end(), pt);
-  }
-
 
   //|///////////////////// nearest_in_polygon ///////////////////////////////
   /// nearest point on or within ring
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 2>* = nullptr>
-  auto nearest_in_polygon(InputIterator f, InputIterator l, typename std::iterator_traits<InputIterator>::value_type const &pt)
-  {
-    return contains(f, l, pt) ? pt : nearest_on_polygon(f, l, pt);
-  }
-
-  template<typename Ring, typename Point, std::enable_if_t<ring_traits<Ring>::dimension == 2>* = nullptr>
+  template<typename Ring, typename Point, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
   auto nearest_in_polygon(Ring const &ring, Point const &pt)
   {
-    return nearest_in_polygon(ring.begin(), ring.end(), pt);
+    return contains(ring, pt) ? pt : nearest_on_polygon(ring, pt);
   }
 
 
   //|/////////////////////// is_convex //////////////////////////////////////
   /// test ring convex
-  template<typename InputIterator, std::enable_if_t<dim<typename std::iterator_traits<InputIterator>::value_type>() == 2>* = nullptr>
+  template<typename InputIterator>
   bool is_convex(InputIterator f, InputIterator l)
   {
-    if (f != l && std::next(f) != l && std::next(std::next(f)) != l)
-    {
-      auto initial = orientation(*f, *std::next(f), *std::next(std::next(f)));
+    using std::prev;
+    using std::next;
 
-      for(InputIterator ic = f, ib = std::prev(l), ia = std::prev(std::prev(l)); ic != l; ia = ib, ib = ic, ++ic)
+    if (f != l && next(f) != l && next(next(f)) != l)
+    {
+      auto initial = orientation(*f, *next(f), *next(next(f)));
+
+      for(auto ic = f, ib = prev(l), ia = prev(prev(l)); ic != l; ia = ib, ib = ic, ++ic)
       {
         if (initial * orientation(*ia, *ib, *ic) < 0)
           return false;
@@ -182,10 +184,13 @@ namespace leap { namespace lml
     return true;
   }
 
-  template<typename Ring, std::enable_if_t<ring_traits<Ring>::dimension == 2>* = nullptr>
-  auto is_convex(Ring const &ring)
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
+  bool is_convex(Ring const &ring)
   {
-    return is_convex(ring.begin(), ring.end());
+    using std::begin;
+    using std::end;
+
+    return is_convex(begin(ring), end(ring));
   }
 
 
@@ -228,9 +233,12 @@ namespace leap { namespace lml
   template<typename Points>
   auto convex_hull(Points &&points, std::false_type) // rvalue
   {
-    std::sort(points.begin(), points.end(), [](typename Points::value_type const &lhs, typename Points::value_type const &rhs) { return (get<0>(lhs) == get<0>(rhs)) ? (get<1>(lhs) < get<1>(rhs)) : (get<0>(lhs) < get<0>(rhs)); });
+    using std::begin;
+    using std::end;
 
-    return convex_hull_sorted<Points>(points.begin(), points.end());
+    std::sort(begin(points), end(points), [](auto const &lhs, auto const &rhs) { return (get<0>(lhs) == get<0>(rhs)) ? (get<1>(lhs) < get<1>(rhs)) : (get<0>(lhs) < get<0>(rhs)); });
+
+    return convex_hull_sorted<Points>(begin(points), end(points));
   }
 
   template<typename Points>

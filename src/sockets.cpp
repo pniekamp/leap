@@ -1928,18 +1928,16 @@ namespace leap { namespace socklib
   //|------------------------------------------------------------------------
 
   //////////////////////// readline /////////////////////////////////////////
-  bool readline(StreamSocket &socket, char *buffer, int n, int timeout)
+  bool readline(StreamSocket &socket, char *buffer, size_t n, int timeout)
   {
-    for(int i = 1; socket.wait_on_bytes(i, timeout) && i < n; ++i)
+    for(size_t i = 1; socket.wait_on_bytes(i, timeout) && i < n; ++i)
     {
       if (socket.peek(i-1) == '\n')
       {
         socket.receive(buffer, i);
 
-        buffer[i-1] = 0;
-
-        for(int k = i-2; k >= 0 && (buffer[k] == '\n' || buffer[k] == '\r'); --k)
-          buffer[k] = 0;
+        for( ; i > 0 && (buffer[i-1] == '\n' || buffer[i-1] == '\r'); --i)
+          buffer[i-1] = 0;
 
         return true;
       }

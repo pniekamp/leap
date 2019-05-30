@@ -155,7 +155,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
     painter.drawPath(path);
 
-    for(size_t i = 0; i < m_points.size()-1; ++i)
+    for(size_t i = 0; i + 1 < m_points.size(); ++i)
     {
       painter.drawEllipse(translate(m_points[i], bezier.controls()[2*i]), 0.01, 0.01);
       painter.drawEllipse(translate(m_points[i+1], bezier.controls()[2*i+1]), 0.01, 0.01);

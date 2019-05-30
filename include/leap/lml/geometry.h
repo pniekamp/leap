@@ -59,13 +59,13 @@ namespace leap { namespace lml
 
   //|///////////////////// area /////////////////////////////////////////////
   /// area of triangle
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   constexpr auto area(Point const &a, Point const &b, Point const &c)
   {
     return std::abs(perp(vec(a, b), vec(a, c))) / 2;
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   constexpr auto area(Point const &a, Point const &b, Point const &c)
   {
     return norm(cross(vec(a, b), vec(a, c))) / 2;
@@ -92,7 +92,7 @@ namespace leap { namespace lml
 
   //|///////////////////// orientation //////////////////////////////////////
   /// orientation of xy triangle, clockwise < 0, anticlockwise > 0
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   auto orientation(Point const &a, Point const &b, Point const &c)
   {
     auto result = perp(vec(a, b), vec(a, c));
@@ -103,7 +103,7 @@ namespace leap { namespace lml
 
   //|///////////////////// centroid /////////////////////////////////////////
   /// centroid of xy triangle
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   constexpr Point centroid(Point const &a, Point const &b, Point const &c)
   {
     return { (get<0>(a) + get<0>(b) + get<0>(c))/3, (get<1>(a) + get<1>(b) + get<1>(c))/3 };
@@ -136,13 +136,13 @@ namespace leap { namespace lml
 
   //|///////////////////// normal ///////////////////////////////////////////
   /// normal to line, triangle
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   constexpr auto normal(Point const &a, Point const &b)
   {
     return normalise(perp(vec(b, a)));
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   constexpr auto normal(Point const &a, Point const &b, Point const &c)
   {
     return normalise(cross(vec(a, b), vec(a, c)));
@@ -151,7 +151,7 @@ namespace leap { namespace lml
 
   //|///////////////////// slope ////////////////////////////////////////////
   /// slope (dy/dx) between two points
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   constexpr auto slope(Point const &a, Point const &b)
   {
     return (get<1>(b) - get<1>(a)) / (get<0>(b) - get<0>(a));
@@ -160,25 +160,25 @@ namespace leap { namespace lml
 
   //|///////////////////// angle ////////////////////////////////////////////
   /// angle from one point to another
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   constexpr auto angle(Point const &a, Point const &b)
   {
     return std::atan2(get<1>(b) - get<1>(a), get<0>(b) - get<0>(a));
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   constexpr auto anglex(Point const &a, Point const &b)
   {
     return std::atan2(get<2>(b) - get<2>(a), get<1>(b) - get<1>(a));
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   constexpr auto angley(Point const &a, Point const &b)
   {
     return std::atan2(get<2>(b) - get<2>(a), get<0>(b) - get<0>(a));
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   constexpr auto anglez(Point const &a, Point const &b)
   {
     return std::atan2(get<1>(b) - get<1>(a), get<0>(b) - get<0>(a));
@@ -187,7 +187,7 @@ namespace leap { namespace lml
 
   //|///////////////////// rotate ///////////////////////////////////////////
   /// rotate point through angle radians
-  template<typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   Point rotate(Point const &pt, coord_type_t<Point> yaw)
   {
     auto x = std::cos(yaw)*get<0>(pt) - std::sin(yaw)*get<1>(pt);
@@ -196,7 +196,7 @@ namespace leap { namespace lml
     return { x, y };
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   Point rotatex(Point const &pt, coord_type_t<Point> roll)
   {
     auto x = get<0>(pt);
@@ -206,7 +206,7 @@ namespace leap { namespace lml
     return { x, y, z };
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   Point rotatey(Point const &pt, coord_type_t<Point> pitch)
   {
     auto x = std::cos(pitch)*get<0>(pt) + std::sin(pitch)*get<2>(pt);
@@ -216,7 +216,7 @@ namespace leap { namespace lml
     return { x, y, z };
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   Point rotatez(Point const &pt, coord_type_t<Point> yaw)
   {
     auto x = std::cos(yaw)*get<0>(pt) - std::sin(yaw)*get<1>(pt);
@@ -226,7 +226,7 @@ namespace leap { namespace lml
     return { x, y, z };
   }
 
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   Point rotate(Point const &pt, coord_type_t<Point> yaw, coord_type_t<Point> pitch, coord_type_t<Point> roll)
   {
     return rotatez(rotatey(rotatex(pt, roll), pitch), yaw);
@@ -235,7 +235,7 @@ namespace leap { namespace lml
 
   //|///////////////////// transform ////////////////////////////////////////
   /// transform a point by a transform matrix
-  template<typename T, template<typename, size_t, size_t> class B, typename Point, std::enable_if_t<dim<Point>() == 2>* = nullptr>
+  template<typename T, template<typename, size_t, size_t> class B, typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
   Point transform(Matrix<T, 3, 3, B> const &m, Point const &pt, T w = 1)
   {
     auto x = m(0,0)*get<0>(pt) + m(0,1)*get<1>(pt) + m(0,2)*w;
@@ -244,7 +244,7 @@ namespace leap { namespace lml
     return { x, y };
   }
 
-  template<typename T, template<typename, size_t, size_t> class B, typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename T, template<typename, size_t, size_t> class B, typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   Point transform(Matrix<T, 4, 4, B> const &m, Point const &pt, T w = 1)
   {
     auto x = m(0,0)*get<0>(pt) + m(0,1)*get<1>(pt) + m(0,2)*get<2>(pt) + m(0,3)*w;
@@ -327,7 +327,7 @@ namespace leap { namespace lml
       result.u = 0;
 
       int k = 0;
-      Point const *region[4];
+      Point const *region[5];
 
       if (dot(v, v) != 0)
       {
@@ -417,7 +417,7 @@ namespace leap { namespace lml
 
   //|///////////////////// intersection /////////////////////////////////////
   /// intersection of ray and triangle (moller–trumbore)
-  template<typename Point, std::enable_if_t<dim<Point>() == 3>* = nullptr>
+  template<typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
   auto intersection(Point const &origin, Point const &direction, Point const &a, Point const &b, Point const &c)
   {
     leap::optional<Point> result;
@@ -460,11 +460,14 @@ namespace leap { namespace lml
   template<typename InputIterator>
   auto nearest_on_polyline(InputIterator f, InputIterator l, typename std::iterator_traits<InputIterator>::value_type const &pt)
   {
+    using std::prev;
+    using std::next;
+
     auto result = typename std::iterator_traits<InputIterator>::value_type();
 
     auto mindist = std::numeric_limits<decltype(distsqr(result, result))>::max();
 
-    for(InputIterator ic = std::next(f), ip = f; ic != l; ip = ic, ++ic)
+    for(auto ic = next(f), ip = f; ic != l; ip = ic, ++ic)
     {
       auto np = nearest_on_segment(*ip, *ic, pt);
 
@@ -483,7 +486,10 @@ namespace leap { namespace lml
   template<typename Polyline, typename Point>
   auto nearest_on_polyline(Polyline const &polyline, Point const &pt)
   {
-    return nearest_on_polyline(polyline.begin(), polyline.end(), pt);
+    using std::begin;
+    using std::end;
+
+    return nearest_on_polyline(begin(polyline), end(polyline), pt);
   }
 
 
@@ -492,16 +498,20 @@ namespace leap { namespace lml
   template<typename InputIterator>
   InputIterator simplify(InputIterator f, InputIterator l, double epsilon)
   {
-    if (f == l || std::next(f) == l || std::next(std::next(f)) == l)
+    using std::prev;
+    using std::next;
+    using std::swap;
+
+    if (f == l || next(f) == l || next(next(f)) == l)
       return l;
 
-    InputIterator a = f;
-    InputIterator b = std::prev(l);
-    InputIterator c = l;
+    auto a = f;
+    auto b = prev(l);
+    auto c = l;
 
     auto maxdist = decltype(distsqr(*a, *c))(0);
 
-    for(InputIterator i = std::next(f); i != std::prev(l); ++i)
+    for(auto i = next(f); i != prev(l); ++i)
     {
       auto dist = distsqr(nearest_on_segment(*a, *b, *i), *i);
 
@@ -514,29 +524,32 @@ namespace leap { namespace lml
 
     if (maxdist > epsilon)
     {
-      auto j = simplify(f, std::next(c), epsilon);
+      auto j = simplify(f, next(c), epsilon);
       auto k = simplify(c, l, epsilon);
 
-      if (j == std::next(c))
+      if (j == next(c))
         return k;
 
-      for(auto i = std::next(c); i != k; ++i)
-        std::swap(*j++, *i);
+      for(auto i = next(c); i != k; ++i)
+        swap(*j++, *i);
 
       return j;
     }
     else
     {
-      std::swap(*std::next(f), *std::prev(l));
+      swap(*next(f), *prev(l));
 
-      return std::next(std::next(f));
+      return next(next(f));
     }
   }
 
   template<typename Polyline>
   void simplify(Polyline &polyline, double epsilon)
   {
-    polyline.erase(simplify(polyline.begin(), polyline.end(), epsilon), polyline.end());
+    using std::begin;
+    using std::end;
+
+    polyline.erase(simplify(begin(polyline), end(polyline), epsilon), end(polyline));
   }
 
 

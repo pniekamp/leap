@@ -104,12 +104,12 @@ void parse_case(QPolygonF *p, QPolygonF *q, string str[2])
 {
   auto a = atov<double>(str[0].substr(9));
 
-  for(size_t i = 0; i < a.size()-2; i += 2)
+  for(size_t i = 0; i + 2 < a.size(); i += 2)
     p->push_back(QPointF(a[i], a[i+1]));
 
   auto b = atov<double>(str[1].substr(9));
 
-  for(size_t i = 0; i < b.size()-2; i += 2)
+  for(size_t i = 0; i + 2 < b.size(); i += 2)
     q->push_back(QPointF(b[i], b[i+1]));
 
   reverse(p->begin(), p->end());

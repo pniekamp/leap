@@ -79,7 +79,7 @@ namespace leap { namespace lml
 
     // Middle Points
 
-    for(size_t i = 1; i < n-1; ++i)
+    for(size_t i = 1; i + 1 < n; ++i)
     {
       R[2*i-1] = k * vec(points[i+1], points[i-1]);
       R[2*i] = k * vec(points[i-1], points[i+1]);
