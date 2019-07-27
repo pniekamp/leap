@@ -12,6 +12,7 @@
 
 #include "lml.h"
 #include <leap/lml/geometry.h>
+#include <leap/lml/geometry2d.h>
 #include <leap/lml/bound.h>
 
 /**
@@ -33,14 +34,9 @@ namespace leap { namespace lml
   template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 3>* = nullptr>
   auto normal(Ring const &ring)
   {
-    using std::begin;
-    using std::end;
-    using std::prev;
-    using std::next;
+    auto result = Vector<coord_type_t<point_type_t<Ring>>, 3>(0);
 
-    auto result = Vector<decltype(get<0>(*begin(ring))*get<0>(*end(ring))), 3>(0);
-
-    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+    for (auto ic = std::begin(ring), ip = std::prev(std::end(ring)); ic != std::end(ring); ip = ic, ++ic)
     {
       result(0) += (get<1>(*ip) - get<1>(*ic)) * (get<2>(*ip) + get<2>(*ic));
       result(1) += (get<2>(*ip) - get<2>(*ic)) * (get<0>(*ip) + get<0>(*ic));

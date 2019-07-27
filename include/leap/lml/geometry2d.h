@@ -51,19 +51,20 @@ namespace leap { namespace lml
   }
 
 
+  //|///////////////////// point_type ///////////////////////////////////////
+  /// point_type of ring
+  template<typename Ring>
+  using point_type_t = typename std::iterator_traits<decltype(std::begin(std::declval<Ring&>()))>::value_type;
+
+
   //|///////////////////// area /////////////////////////////////////////////
   /// area of xy ring
   template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
   auto area(Ring const &ring)
   {
-    using std::begin;
-    using std::end;
-    using std::prev;
-    using std::next;
+    auto result = coord_type_t<point_type_t<Ring>>(0);
 
-    auto result = decltype(get<0>(*begin(ring))*get<0>(*end(ring)))(0);
-
-    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+    for (auto ic = std::begin(ring), ip = std::prev(std::end(ring)); ic != std::end(ring); ip = ic, ++ic)
 	{
 	  result += get<0>(*ip) * get<1>(*ic) - get<0>(*ic) * get<1>(*ip);
 	}
@@ -77,14 +78,9 @@ namespace leap { namespace lml
   template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
   auto orientation(Ring const &ring)
   {
-    using std::begin;
-    using std::end;
-    using std::prev;
-    using std::next;
+    auto result = coord_type_t<point_type_t<Ring>>(0);
 
-    auto result = decltype(get<0>(*begin(ring))*get<0>(*end(ring)))(0);
-
-    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+    for (auto ic = std::begin(ring), ip = std::prev(std::end(ring)); ic != std::end(ring); ip = ic, ++ic)
 	{
 	  result += get<0>(*ip) * get<1>(*ic) - get<0>(*ic) * get<1>(*ip);
 	}
@@ -95,16 +91,11 @@ namespace leap { namespace lml
 
   //|///////////////////// contains /////////////////////////////////////////
   /// ring contains point
-  template<typename Ring, typename Point, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
-  bool contains(Ring const &ring, Point const &pt)
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
+  bool contains(Ring const &ring, point_type_t<Ring> const &pt)
   {
-    using std::begin;
-    using std::end;
-    using std::prev;
-    using std::next;
-
     int count = 0;
-    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+    for (auto ic = std::begin(ring), ip = std::prev(std::end(ring)); ic != std::end(ring); ip = ic, ++ic)
     {
       auto x1 = get<0>(*ip);
       auto x2 = get<0>(*ic);
@@ -124,19 +115,14 @@ namespace leap { namespace lml
 
   //|///////////////////// nearest_on_polygon ///////////////////////////////
   /// nearest point on ring edge
-  template<typename Ring, typename Point, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
-  auto nearest_on_polygon(Ring const &ring, Point const &pt)
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
+  auto nearest_on_polygon(Ring const &ring, point_type_t<Ring> const &pt)
   {
-    using std::begin;
-    using std::end;
-    using std::prev;
-    using std::next;
-
-    auto result = Point{};
+    auto result = point_type_t<Ring>{};
 
     auto mindist = std::numeric_limits<decltype(distsqr(result, result))>::max();
 
-    for (auto ic = begin(ring), ip = prev(end(ring)); ic != end(ring); ip = ic, ++ic)
+    for (auto ic = std::begin(ring), ip = std::prev(std::end(ring)); ic != std::end(ring); ip = ic, ++ic)
     {
       auto np = nearest_on_segment(*ip, *ic, pt);
 
@@ -155,8 +141,8 @@ namespace leap { namespace lml
 
   //|///////////////////// nearest_in_polygon ///////////////////////////////
   /// nearest point on or within ring
-  template<typename Ring, typename Point, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
-  auto nearest_in_polygon(Ring const &ring, Point const &pt)
+  template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
+  auto nearest_in_polygon(Ring const &ring, point_type_t<Ring> const &pt)
   {
     return contains(ring, pt) ? pt : nearest_on_polygon(ring, pt);
   }
@@ -167,14 +153,11 @@ namespace leap { namespace lml
   template<typename InputIterator>
   bool is_convex(InputIterator f, InputIterator l)
   {
-    using std::prev;
-    using std::next;
-
-    if (f != l && next(f) != l && next(next(f)) != l)
+    if (f != l && std::next(f) != l && std::next(std::next(f)) != l)
     {
-      auto initial = orientation(*f, *next(f), *next(next(f)));
+      auto initial = orientation(*f, *std::next(f), *std::next(std::next(f)));
 
-      for(auto ic = f, ib = prev(l), ia = prev(prev(l)); ic != l; ia = ib, ib = ic, ++ic)
+      for(auto ic = f, ib = std::prev(l), ia = std::prev(std::prev(l)); ic != l; ia = ib, ib = ic, ++ic)
       {
         if (initial * orientation(*ia, *ib, *ic) < 0)
           return false;
@@ -187,10 +170,7 @@ namespace leap { namespace lml
   template<typename Ring, size_t dimension = dim<Ring>(), std::enable_if_t<dimension == 2>* = nullptr>
   bool is_convex(Ring const &ring)
   {
-    using std::begin;
-    using std::end;
-
-    return is_convex(begin(ring), end(ring));
+    return is_convex(std::begin(ring), std::end(ring));
   }
 
 
@@ -231,28 +211,12 @@ namespace leap { namespace lml
   }
 
   template<typename Points>
-  auto convex_hull(Points &&points, std::false_type) // rvalue
+  auto convex_hull(Points points)
   {
-    using std::begin;
-    using std::end;
+    std::sort(std::begin(points), std::end(points), [](auto const &lhs, auto const &rhs) { return (get<0>(lhs) == get<0>(rhs)) ? (get<1>(lhs) < get<1>(rhs)) : (get<0>(lhs) < get<0>(rhs)); });
 
-    std::sort(begin(points), end(points), [](auto const &lhs, auto const &rhs) { return (get<0>(lhs) == get<0>(rhs)) ? (get<1>(lhs) < get<1>(rhs)) : (get<0>(lhs) < get<0>(rhs)); });
-
-    return convex_hull_sorted<Points>(begin(points), end(points));
+    return convex_hull_sorted<Points>(std::begin(points), std::end(points));
   }
-
-  template<typename Points>
-  auto convex_hull(Points &&points, std::true_type) // lvalue
-  {
-    return convex_hull(std::decay_t<Points>(points), std::false_type());
-  }
-
-  template<typename Points>
-  auto convex_hull(Points &&points)
-  {
-    return convex_hull(std::forward<Points>(points), std::is_lvalue_reference<Points>());
-  }
-
 
 } // namespace lml
 } // namespace leap
@@ -275,12 +239,12 @@ namespace leap { namespace lml
 
   //|///////////////////// boolean_union ////////////////////////////////////
   /// polygon union
-  template<typename Ring, typename Point = typename std::iterator_traits<decltype(std::declval<Ring>().begin())>::value_type>
+  template<typename Ring>
   std::vector<Ring> boolean_union(Ring const &p, Ring const &q)
   {
     using namespace PolygonSetOp;
 
-    Graph<Point> graph(p.size(), q.size());
+    Graph<point_type_t<Ring>> graph(p.size(), q.size());
 
     graph.push_p(p.begin(), p.end());
     graph.push_q(q.begin(), q.end());
@@ -297,12 +261,12 @@ namespace leap { namespace lml
 
   //|///////////////////// boolean_intersection /////////////////////////////
   /// polygon intersection
-  template<typename Ring, typename Point = typename std::iterator_traits<decltype(std::declval<Ring>().begin())>::value_type>
+  template<typename Ring>
   std::vector<Ring> boolean_intersection(Ring const &p, Ring const &q)
   {
     using namespace PolygonSetOp;
 
-    Graph<Point> graph(p.size(), q.size());
+    Graph<point_type_t<Ring>> graph(p.size(), q.size());
 
     graph.push_p(p.begin(), p.end());
     graph.push_q(q.begin(), q.end());
@@ -319,12 +283,12 @@ namespace leap { namespace lml
 
   //|///////////////////// boolean_difference ///////////////////////////////
   /// polygon difference
-  template<typename Ring, typename Point = typename std::iterator_traits<decltype(std::declval<Ring>().begin())>::value_type>
+  template<typename Ring>
   std::vector<Ring> boolean_difference(Ring const &p, Ring const &q)
   {
     using namespace PolygonSetOp;
 
-    Graph<Point> graph(p.size(), q.size());
+    Graph<point_type_t<Ring>> graph(p.size(), q.size());
 
     graph.push_p(p.begin(), p.end());
     graph.push_q(std::reverse_iterator<decltype(q.end())>(q.end()), std::reverse_iterator<decltype(q.begin())>(q.begin()));
@@ -362,12 +326,12 @@ namespace leap { namespace lml
 
   //|/////////////////////// is_simple //////////////////////////////////////
   /// test ring simple
-  template<typename Ring, typename Point = typename std::iterator_traits<decltype(std::declval<Ring>().begin())>::value_type>
+  template<typename Ring>
   bool is_simple(Ring const &p)
   {
     using namespace PolygonSimplify;
 
-    Graph<Point> graph(p.size());
+    Graph<point_type_t<Ring>> graph(p.size());
 
     graph.push_p(p.begin(), p.end());
 
@@ -379,18 +343,18 @@ namespace leap { namespace lml
 
   //|///////////////////// boolean_simplify /////////////////////////////////
   /// polygon simplify (divide at self intersections)
-  template<typename Ring, typename Point = typename std::iterator_traits<decltype(std::declval<Ring>().begin())>::value_type>
+  template<typename Ring>
   std::vector<Ring> boolean_simplify(Ring const &p)
   {
     using namespace PolygonSimplify;
 
-    Graph<Point> graph(p.size());
+    Graph<point_type_t<Ring>> graph(p.size());
 
     graph.push_p(p.begin(), p.end());
 
     graph.join();
 
-    std::vector<PolygonSimplify::Ring<Point>> rings;
+    std::vector<PolygonSimplify::Ring<point_type_t<Ring>>> rings;
 
     polygon_simplify(&rings, graph);
 

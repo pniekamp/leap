@@ -85,7 +85,6 @@ QPolygonF random(double width, double height, int count)
   return random;
 }
 
-
 //--------------------- Main Window -----------------------------------------
 //---------------------------------------------------------------------------
 
@@ -163,6 +162,61 @@ void MainWindow::timerEvent(QTimerEvent *event)
 }
 
 
+template<typename Mesh>
+void constrain(Mesh &mesh, QPolygonF const &shape)
+{
+  auto cursor = mesh.edges().front();
+
+  for (auto ic = std::begin(shape), ip = std::prev(std::end(shape)); ic != std::end(shape); ip = ic, ++ic)
+  {
+    while (*cursor->org() != *ip)
+    {
+      if (*cursor->dst() == *ip)
+        cursor = cursor->l_next();
+
+      else if (orientation(*ip, *cursor->dst(), *cursor->org()) > 0.0)
+        cursor = sym(cursor);
+
+      else if (orientation(*ip, *cursor->o_next()->dst(), *cursor->o_next()->org()) <= 0.0)
+        cursor = cursor->o_next();
+
+      else if (orientation(*ip, *cursor->d_prev()->dst(), *cursor->d_prev()->org()) <= 0.0)
+        cursor = cursor->d_prev();
+
+      else
+        break;
+    }
+
+    while(*cursor->dst() != *ic)
+    {
+      auto left = orientation(*ic, *cursor->org(), *cursor->dst());
+      auto right = orientation(*ic, *cursor->org(), *cursor->l_next()->dst());
+
+      if (left > 0 && right < 0)
+      {
+        auto edge = cursor->l_next();
+
+        mesh.splice_edges(edge, edge->o_prev());
+        mesh.splice_edges(sym(edge), sym(edge)->o_prev());
+
+        edge->site = cursor->l_next()->dst();
+        sym(edge)->site = cursor->org();
+
+        mesh.splice_edges(edge, cursor->l_next()->l_next());
+        mesh.splice_edges(sym(edge), cursor);
+      }
+      else if (left == 0 && dot(vec(*cursor->org(), *cursor->dst()), vec(*cursor->org(), *ic)) > 0)
+      {
+        cursor = cursor->l_next();
+      }
+      else
+      {
+        cursor = cursor->o_next();
+      }
+    }
+  }
+}
+
 void MainWindow::paintEvent(QPaintEvent *event)
 {
   QPainter painter(this);
@@ -200,15 +254,15 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
   // Delaunay
 
-  vector<QPolygonF> polygons;
-
-  polygons.push_back(m_shape);
-
   long s = clock();
 
   Delaunay2d::Mesh<QPointF> delaunay;
 
-  Delaunay2d::triangulate(&delaunay, polygons);
+  delaunay.add_sites(m_shape.begin(), m_shape.end());
+
+  delaunay.triangulate();
+
+  constrain(delaunay, m_shape);
 
   long e = clock();
 

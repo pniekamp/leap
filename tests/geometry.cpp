@@ -11,6 +11,7 @@
 #include <leap/lml/io.h>
 #include <leap/lml/geometry.h>
 #include <leap/lml/geometry2d.h>
+#include <leap/lml/geometry3d.h>
 #include <leap/lml/matrixconstants.h>
 
 using namespace std;
@@ -402,23 +403,19 @@ void TestDelaunay2d()
 {
   cout << "Test Delaunay\n";
 
+  Delaunay2d::Mesh<Vector2d> mesh;
+
   auto m = RotationMatrix<double>(-0.3);
 
-  list<Vector2d> P;
   for(double y = 0; y < 100; y += 25)
   {
     for(double x = 0; x < 100; x += 25)
     {
-      P.push_back(m * Vector2(x, y));
+      mesh.add_site(m * Vector2(x, y));
     }
   }
 
-  vector<list<Vector2d>> polygons;
-  polygons.push_back(P);
-
-  Delaunay2d::Mesh<Vector2d> mesh;
-
-  Delaunay2d::triangulate(&mesh, polygons);
+  mesh.triangulate();
 
   cout << "  " << mesh.sites().size() << " Sites\n";
   cout << "  " << mesh.edges().size() << " Edges\n";
@@ -432,6 +429,8 @@ void TestVoronoi2d()
 {
   cout << "Test Voronoi\n";
 
+  Voronoi2d::Voronoi<Vector2d> voronoi;
+
   auto m = RotationMatrix<double>(0.8);
 
   vector<Vector2d> P;
@@ -439,13 +438,9 @@ void TestVoronoi2d()
   {
     for(double x = 0; x < 100; x += 25)
     {
-      P.push_back(m * Vector2(x, y));
+      voronoi.add_site(m * Vector2(x, y));
     }
   }
-
-  Voronoi2d::Voronoi<Vector2d> voronoi;
-
-  voronoi.add_sites(P.begin(), P.end());
 
   voronoi.calculate();
 

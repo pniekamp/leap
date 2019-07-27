@@ -75,7 +75,7 @@ namespace leap { namespace lml
           public:
 
             using item_type = Item;
-            using bound_type = std::decay_t<decltype(box()(std::declval<Item &>()))>;
+            using bound_type = std::decay_t<decltype(box()(std::declval<Item&>()))>;
 
             using value_type = item_type;
             using pointer = item_type *;
@@ -122,7 +122,7 @@ namespace leap { namespace lml
         using allocator_type = Alloc;
         using item_allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<Item>;
         using node_allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<Node>;
-        using bound_type = std::decay_t<decltype(box()(std::declval<Item &>()))>;
+        using bound_type = std::decay_t<decltype(box()(std::declval<Item&>()))>;
 
         using iterator = normal_iterator<Node *>;
         using const_iterator = normal_iterator<Node const *>;

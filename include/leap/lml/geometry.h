@@ -460,14 +460,11 @@ namespace leap { namespace lml
   template<typename InputIterator>
   auto nearest_on_polyline(InputIterator f, InputIterator l, typename std::iterator_traits<InputIterator>::value_type const &pt)
   {
-    using std::prev;
-    using std::next;
-
     auto result = typename std::iterator_traits<InputIterator>::value_type();
 
     auto mindist = std::numeric_limits<decltype(distsqr(result, result))>::max();
 
-    for(auto ic = next(f), ip = f; ic != l; ip = ic, ++ic)
+    for(auto ic = std::next(f), ip = f; ic != l; ip = ic, ++ic)
     {
       auto np = nearest_on_segment(*ip, *ic, pt);
 
@@ -486,10 +483,7 @@ namespace leap { namespace lml
   template<typename Polyline, typename Point>
   auto nearest_on_polyline(Polyline const &polyline, Point const &pt)
   {
-    using std::begin;
-    using std::end;
-
-    return nearest_on_polyline(begin(polyline), end(polyline), pt);
+    return nearest_on_polyline(std::begin(polyline), std::end(polyline), pt);
   }
 
 
@@ -498,20 +492,18 @@ namespace leap { namespace lml
   template<typename InputIterator>
   InputIterator simplify(InputIterator f, InputIterator l, double epsilon)
   {
-    using std::prev;
-    using std::next;
     using std::swap;
 
-    if (f == l || next(f) == l || next(next(f)) == l)
+    if (f == l || std::next(f) == l || std::next(std::next(f)) == l)
       return l;
 
     auto a = f;
-    auto b = prev(l);
+    auto b = std::prev(l);
     auto c = l;
 
     auto maxdist = decltype(distsqr(*a, *c))(0);
 
-    for(auto i = next(f); i != prev(l); ++i)
+    for(auto i = std::next(f); i != std::prev(l); ++i)
     {
       auto dist = distsqr(nearest_on_segment(*a, *b, *i), *i);
 
@@ -524,32 +516,29 @@ namespace leap { namespace lml
 
     if (maxdist > epsilon)
     {
-      auto j = simplify(f, next(c), epsilon);
+      auto j = simplify(f, std::next(c), epsilon);
       auto k = simplify(c, l, epsilon);
 
-      if (j == next(c))
+      if (j == std::next(c))
         return k;
 
-      for(auto i = next(c); i != k; ++i)
+      for(auto i = std::next(c); i != k; ++i)
         swap(*j++, *i);
 
       return j;
     }
     else
     {
-      swap(*next(f), *prev(l));
+      swap(*std::next(f), *std::prev(l));
 
-      return next(next(f));
+      return std::next(std::next(f));
     }
   }
 
   template<typename Polyline>
   void simplify(Polyline &polyline, double epsilon)
   {
-    using std::begin;
-    using std::end;
-
-    polyline.erase(simplify(begin(polyline), end(polyline), epsilon), end(polyline));
+    polyline.erase(simplify(std::begin(polyline), std::end(polyline), epsilon), std::end(polyline));
   }
 
 

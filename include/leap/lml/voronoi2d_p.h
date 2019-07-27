@@ -35,12 +35,13 @@ namespace leap { namespace lml { namespace Voronoi2d
   //|--------------------- Cell -------------------------------------------
   //|----------------------------------------------------------------------
 
-  template<typename T>
+  template<typename T, typename Alloc>
   class Cell
   {
     public:
-      Cell(T const &site)
-        : site(site)
+      Cell(T const &site, Alloc const &allocator) noexcept
+        : site(site),
+          neighbours(allocator)
       {
         visited = false;
       }
@@ -49,12 +50,12 @@ namespace leap { namespace lml { namespace Voronoi2d
 
       struct Neighbour
       {
-        Cell<T> *cell;
+        Cell<T, Alloc> *cell;
 
         Vector2d boundary[2];
       };
 
-      std::vector<Neighbour> neighbours;
+      std::vector<Neighbour, typename std::allocator_traits<Alloc>::template rebind_alloc<Neighbour>> neighbours;
 
       bool visited;
   };
@@ -73,16 +74,19 @@ namespace leap { namespace lml { namespace Voronoi2d
   //|--------------------- Voronoi ----------------------------------------
   //|----------------------------------------------------------------------
 
-  template<typename T, class pos = pos<T>>
+  template<typename T, class pos = pos<T>, typename Alloc = std::allocator<T>>
   class Voronoi
   {
     public:
 
-      using cell_type = Cell<T>;
-      using cells_type = std::vector<Cell<T> >;
+      using allocator_type = Alloc;
+      using cells_allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<Cell<T, Alloc>>;
+
+      using cell_type = Cell<T, Alloc>;
+      using cells_type = std::vector<Cell<T, Alloc>, cells_allocator_type>;
 
     public:
-      Voronoi();
+      Voronoi(Alloc const &allocator = Alloc()) noexcept;
       Voronoi(Voronoi const &) = delete;
       Voronoi(Voronoi &&) noexcept = delete;
 
@@ -91,59 +95,67 @@ namespace leap { namespace lml { namespace Voronoi2d
       template<typename InputIterator>
       void add_sites(InputIterator f, InputIterator l);
 
+    public:
+
       void calculate();
 
       cells_type &cells() { return m_mesh.sites(); }
+
+    protected:
+
+      allocator_type m_allocator;
 
     private:
 
       struct cellpos
       {
-        decltype(auto) operator()(Cell<T> const &cell) const
+        decltype(auto) operator()(Cell<T, Alloc> const &cell) const
         {
           return pos()(cell.site);
         }
       };
 
-      Delaunay2d::Mesh<Cell<T>, cellpos> m_mesh;
+      Delaunay2d::Mesh<Cell<T, Alloc>, cellpos, cells_allocator_type> m_mesh;
   };
 
 
   //|///////////////////// Voronoi::Constructor//////////////////////////////
-  template<typename T, class pos>
-  Voronoi<T, pos>::Voronoi()
+  template<typename T, class pos, typename Alloc>
+  Voronoi<T, pos, Alloc>::Voronoi(Alloc const &allocator) noexcept
+    : m_allocator(allocator),
+      m_mesh(allocator)
   {
   }
 
 
   //|///////////////////// Voronoi::add_site ////////////////////////////////
-  template<typename T, class pos>
-  void Voronoi<T, pos>::add_site(T const &site)
+  template<typename T, class pos, typename Alloc>
+  void Voronoi<T, pos, Alloc>::add_site(T const &site)
   {
-    m_mesh.add_site(Cell<T>(site));
+    m_mesh.add_site(Cell<T, Alloc>(site, m_allocator));
   }
 
 
   //|///////////////////// Voronoi::add_sites ////////////////////////////////
-  template<typename T, class pos>
+  template<typename T, class pos, typename Alloc>
   template<typename InputIterator>
-  void Voronoi<T, pos>::add_sites(InputIterator f, InputIterator l)
+  void Voronoi<T, pos, Alloc>::add_sites(InputIterator f, InputIterator l)
   {
     for(InputIterator i = f; i != l; ++i)
-      m_mesh.add_site(Cell<T>(*i));
+      m_mesh.add_site(Cell<T, Alloc>(*i, m_allocator));
   }
 
 
   //|///////////////////// Voronoi::calculate ///////////////////////////////
   /// voronoi diagram
-  template<typename T, class pos>
-  void Voronoi<T, pos>::calculate()
+  template<typename T, class pos, typename Alloc>
+  void Voronoi<T, pos, Alloc>::calculate()
   {
     m_mesh.triangulate();
 
     for(auto i = m_mesh.edges().begin(); i != m_mesh.edges().end(); ++i)
     {
-      for(auto *edge = *i; edge < (*i)+4; edge += 2)
+      for(auto *edge = (*i); edge < (*i)+4; edge += 2)
       {
         auto cell = edge->org();
 
@@ -156,7 +168,7 @@ namespace leap { namespace lml { namespace Voronoi2d
         {
           if (curr->l_next()->l_next() == curr->l_prev() && curr->r_prev()->r_prev() == curr->r_next())
           {
-            typename Cell<T>::Neighbour neighbour;
+            typename Cell<T, Alloc>::Neighbour neighbour;
 
             neighbour.cell = curr->dst();
             neighbour.boundary[0] = circle_centre(pos()(curr->org()->site), pos()(curr->dst()->site), pos()(curr->r_prev()->dst()->site));

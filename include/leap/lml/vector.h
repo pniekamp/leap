@@ -47,56 +47,37 @@ namespace leap { namespace lml
 
       static constexpr size_t size() { return sizeof...(Indices); }
 
-      Vector operator()() const { return { (*this)[Indices]... }; }
+      template<typename V>
+      VectorView &operator +=(V &&v) { static_cast<Vector&>(*this) = static_cast<Vector&>(*this) + std::forward<V>(v); return *this; }
 
       template<typename V>
-      VectorView &operator +=(V &&v) { assign(*this, static_cast<Vector&>(*this) + std::forward<V>(v)); return *this; }
+      VectorView &operator -=(V &&v) { static_cast<Vector&>(*this) = static_cast<Vector&>(*this) - std::forward<V>(v); return *this; }
 
       template<typename V>
-      VectorView &operator -=(V &&v) { assign(*this, static_cast<Vector&>(*this) - std::forward<V>(v)); return *this; }
+      VectorView &operator *=(V &&v) { static_cast<Vector&>(*this) = static_cast<Vector&>(*this) * std::forward<V>(v); return *this; }
 
       template<typename V>
-      VectorView &operator *=(V &&v) { assign(*this, static_cast<Vector&>(*this) * std::forward<V>(v)); return *this; }
-
-      template<typename V>
-      VectorView &operator /=(V &&v) { assign(*this, static_cast<Vector&>(*this) / std::forward<V>(v)); return *this; }
+      VectorView &operator /=(V &&v) { static_cast<Vector&>(*this) = static_cast<Vector&>(*this) / std::forward<V>(v); return *this; }
 
 #if 0
-      constexpr T operator[](size_t i) const
+      template<typename V>
+      using has_data_t = decltype(std::declval<V>().data());
+
+      template<typename V>
+      using has_array_t = decltype(std::declval<V>().data);
+
+      constexpr T const &operator[](size_t i) const
       {
-        if constexpr(constexpr())
-        {
-          T elements[sizeof(Vector)/sizeof(T)] = {};
-          __builtin_memcpy(elements, this, sizeof(elements));
-
-          return elements[i];
-        }
+        if constexpr(std::experimental::is_detected<has_data_t, Vector>::value)
+          return static_cast<Vector const *>(this)->data()[i];
+        else if constexpr(std::experimental::is_detected<has_array_t, Vector>::value)
+          return static_cast<Vector const *>(this)->data[i];
         else
-        {
           return *((T const *)this + i);
-        }
       }
-
-//      constexpr T const &operator[](size_t i) const
-//      {
-//        template<typename V>
-//        using has_data_t = decltype(std::declval<V>().data());
-
-//        template<typename V>
-//        using has_array_t = decltype(std::declval<V>().data);
-
-//        if constexpr(std::experimental::is_detected<has_data_t, Vector>::value)
-//          return static_cast<Vector const *>(this)->data()[i];
-//        else if constexpr(std::experimental::is_detected<has_array_t, Vector>::value)
-//          return static_cast<Vector const *>(this)->data[i];
-//        else
-//          return *((T const *)this + i);
-//      }
 #else
       constexpr T const &operator[](size_t i) const { return *((T const *)this + i); }
 #endif
-
-      T &operator[](size_t i) { return *((T*)this + i); }
 
     protected:
       VectorView() = default;
@@ -110,17 +91,9 @@ namespace leap { namespace lml
 
   //|///////////////////// VectorView get ///////////////////////////////////
   template<size_t i, typename Vector, typename T, size_t... Indices>
-  constexpr decltype(auto) get(VectorView<Vector, T, Indices...> const &v) noexcept
+  constexpr T const &get(VectorView<Vector, T, Indices...> const &v) noexcept
   {
     return v[get<i>(index_sequence<Indices...>())];
-  }
-
-
-  //|///////////////////// VectorView assign ////////////////////////////////
-  template<typename Vector, typename T, size_t... Indices, size_t... Jndices>
-  void assign(VectorView<Vector, T, Indices...> &lhs, VectorView<Vector, T, Jndices...> const &rhs)
-  {
-    std::tie(lhs[Indices]...) = std::make_tuple(rhs[Jndices]...);
   }
 
 
@@ -771,3 +744,25 @@ namespace leap { namespace lml
 
 } // namespace lml
 } // namespace leap
+
+#if 0
+namespace std
+{
+  // Tuple Like
+
+  template<typename T, typename enable = void>
+  using leap_enable_if_tuple_size_imp = T;
+
+  template<typename T>
+  struct tuple_size<leap_enable_if_tuple_size_imp<T, std::enable_if_t<leap::lml::is_vector_view<T>::value>>>
+    : std::integral_constant<std::size_t, T::size()>
+  {
+  };
+
+  template<std::size_t i, typename T>
+  struct tuple_element<i, leap_enable_if_tuple_size_imp<T, std::enable_if_t<leap::lml::is_vector_view<T>::value>>>
+  {
+    using type = typename T::value_type const &;
+  };
+}
+#endif
