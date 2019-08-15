@@ -11,7 +11,6 @@
 #include <leap/lml/vector.h>
 #include <leap/lml/matrix.h>
 #include <leap/lml/matrixconstants.h>
-#include <leap/lml/geometry.h>
 #include <leap/lml/bound.h>
 #include <QApplication>
 #include <QWidget>

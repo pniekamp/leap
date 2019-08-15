@@ -13,7 +13,6 @@
 #include "lml.h"
 #include <leap/lml/geometry.h>
 #include <leap/lml/geometry2d.h>
-#include <leap/lml/bound.h>
 
 /**
  * \namespace leap::lml

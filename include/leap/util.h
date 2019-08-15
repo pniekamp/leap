@@ -25,6 +25,10 @@
 #include <cctype>
 #include <tuple>
 
+#if __has_include(<charconv>)
+# include <charconv>
+#endif
+
 /**
  * \namespace leap
  * \brief Leap Library containing common helper routines
@@ -153,55 +157,103 @@ namespace leap
   {
     T result;
 
-    if (!str.empty())
+    struct svbuf : std::streambuf
     {
-      struct svbuf : std::streambuf
+      svbuf(string_view sv)
       {
-        svbuf(string_view sv)
-        {
-          std::streambuf::setg(const_cast<char*>(sv.begin()), const_cast<char*>(sv.begin()), const_cast<char*>(sv.end()));
-        }
-      };
+        std::streambuf::setg(const_cast<char*>(sv.begin()), const_cast<char*>(sv.begin()), const_cast<char*>(sv.end()));
+      }
+    };
 
-      svbuf svss(str);
-      std::istream ss(&svss);
+    svbuf svss(str);
+    std::istream ss(&svss);
 
-      ss >> result;
-    }
-    else
+    if (ss >> result)
     {
-      result = defaultvalue;
+      return result;
     }
 
-    return result;
+    return defaultvalue;
   }
 
   template<>
   inline int ato(string_view str, int const &defaultvalue)
   {
-    // TODO: implement with from_chars
-    return (!str.empty()) ? stoi(str.to_string()) : defaultvalue;
+#if __cplusplus < 201703L
+    if (!str.empty())
+    {
+      return stoi(str.to_string());
+    }
+#else
+    int result;
+
+    if (auto [p, ec] = std::from_chars(str.begin(), str.end(), result); ec == std::errc())
+    {
+      return result;
+    }
+#endif
+
+    return defaultvalue;
   }
 
   template<>
   inline long ato(string_view str, long const &defaultvalue)
   {
-    // TODO: implement with from_chars
-    return (!str.empty()) ? stol(str.to_string()) : defaultvalue;
+#if __cplusplus < 201703L
+    if (!str.empty())
+    {
+      return stol(str.to_string());
+    }
+#else
+    long result;
+
+    if (auto [p, ec] = std::from_chars(str.begin(), str.end(), result); ec == std::errc())
+    {
+      return result;
+    }
+#endif
+
+    return defaultvalue;
   }
 
   template<>
   inline float ato(string_view str, float const &defaultvalue)
   {
-    // TODO: implement with from_chars
-    return (!str.empty()) ? stof(str.to_string()) : defaultvalue;
+#if __cplusplus < 201703L || defined(__GNUC__) || defined(__clang__)
+    if (!str.empty())
+    {
+      return stof(str.to_string());
+    }
+#else
+    float result;
+
+    if (auto [p, ec] = std::from_chars(str.begin(), str.end(), result); ec == std::errc())
+    {
+      return result;
+    }
+#endif
+
+    return defaultvalue;
   }
 
   template<>
   inline double ato(string_view str, double const &defaultvalue)
   {
-    // TODO: implement with from_chars
-    return (!str.empty()) ? stod(str.to_string()) : defaultvalue;
+#if __cplusplus < 201703L || defined(__GNUC__) || defined(__clang__)
+    if (!str.empty())
+    {
+      return stod(str.to_string());
+    }
+#else
+    double result;
+
+    if (auto [p, ec] = std::from_chars(str.begin(), str.end(), result); ec == std::errc())
+    {
+      return result;
+    }
+#endif
+
+    return defaultvalue;
   }
 
   template<>
@@ -651,7 +703,7 @@ namespace leap
   }
 
 
-#if _MSVC_LANG < 201703
+#if __cplusplus < 201703L
   //|//////////// clamp /////////////////////////////////////////////////////
   /**
    * \brief clamp a value within lower and upper

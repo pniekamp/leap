@@ -220,7 +220,7 @@ static void QuaternionTest()
 {
   cout << "Quaternion Test Set\n";
 
-  Quaternion<double> P(xUnit3d, 3.14);
+  Quaternion<double> P(Vector3(1.0, 0.0, 0.0), 3.14);
 
   cout << "  " << P << " : " << norm(P) << "\n";
 
@@ -238,15 +238,17 @@ static void QuaternionTest()
 
   cout << "  " << R << " : " << norm(R) << "\n";
 
-  cout << "  " << Quaternion<double>(zUnit3d, 3.14/2) * Vector3(2.0, 0.0, 0.0);
-  cout << "  " << Quaternion<double>(zUnit3d, 3.14) * Vector3(2.0, 0.0, 0.0);
-  cout << "  " << Quaternion<double>(zUnit3d, -3.14/2) * Vector3(2.0, 0.0, 0.0) << "\n";
-  cout << "  " << Quaternion<double>(zUnit3d, 3.14/2) * Vector3(0.0, 2.0, 0.0);
-  cout << "  " << Quaternion<double>(zUnit3d, 3.14) * Vector3(0.0, 2.0, 0.0);
-  cout << "  " << Quaternion<double>(zUnit3d, -3.14/2) * Vector3(0.0, 2.0, 0.0) << "\n";
-  cout << "  " << Quaternion<double>(zUnit3d, 3.14/2) * Vector3(0.0, 0.0, 2.0);
-  cout << "  " << Quaternion<double>(zUnit3d, 3.14) * Vector3(0.0, 0.0, 2.0);
-  cout << "  " << Quaternion<double>(zUnit3d, -3.14/2) * Vector3(0.0, 0.0, 2.0) << "\n";
+  auto Z = Vector3(0.0, 0.0, 1.0);
+
+  cout << "  " << Quaternion<double>(Z, 3.14/2) * Vector3(2.0, 0.0, 0.0);
+  cout << "  " << Quaternion<double>(Z, 3.14) * Vector3(2.0, 0.0, 0.0);
+  cout << "  " << Quaternion<double>(Z, -3.14/2) * Vector3(2.0, 0.0, 0.0) << "\n";
+  cout << "  " << Quaternion<double>(Z, 3.14/2) * Vector3(0.0, 2.0, 0.0);
+  cout << "  " << Quaternion<double>(Z, 3.14) * Vector3(0.0, 2.0, 0.0);
+  cout << "  " << Quaternion<double>(Z, -3.14/2) * Vector3(0.0, 2.0, 0.0) << "\n";
+  cout << "  " << Quaternion<double>(Z, 3.14/2) * Vector3(0.0, 0.0, 2.0);
+  cout << "  " << Quaternion<double>(Z, 3.14) * Vector3(0.0, 0.0, 2.0);
+  cout << "  " << Quaternion<double>(Z, -3.14/2) * Vector3(0.0, 0.0, 2.0) << "\n";
 
   cout << endl;
 }

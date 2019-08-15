@@ -115,21 +115,13 @@ namespace leap { namespace lml
     return translate(pt, v, make_index_sequence<0, dim<Point>()>());
   }
 
-#if _MSC_VER
-  template<typename Point, std::enable_if_t<!std::is_same<Point, Vector<coord_type_t<Point>, dim<Point>()>>::value>* = nullptr>
-#else
   template<typename Point, std::enable_if_t<!std::is_same<Point, Vector<coord_type_t<Point>, point_traits<Point>::dimension>>::value>* = nullptr>
-#endif
   auto operator -(Point const& pt, Vector<coord_type_t<Point>, dim<Point>()> const& v)
   {
     return translate(pt, -v, make_index_sequence<0, dim<Point>()>());
   }
 
-#if _MSC_VER
   template<typename Point, std::enable_if_t<!std::is_same<Point, Vector<coord_type_t<Point>, point_traits<Point>::dimension>>::value>* = nullptr>
-#else
-  template<typename Point, std::enable_if_t<!std::is_same<Point, Vector<coord_type_t<Point>, dim<Point>()>>::value>* = nullptr>
-#endif
   auto operator +(Point const &pt, Vector<coord_type_t<Point>, dim<Point>()> const &v)
   {
     return translate(pt, v, make_index_sequence<0, dim<Point>()>());

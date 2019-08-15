@@ -224,8 +224,8 @@ namespace leap { namespace lml
     return result;
   }
 
-  template<typename T>
-  constexpr Matrix<T, 3, 3> RotationMatrix(Quaternion<T> const &q)
+  template<typename T, typename V>
+  constexpr Matrix<T, 3, 3> RotationMatrix(Quaternion<T, V> const &q)
   {
     Matrix<T, 3, 3> result = {};
 

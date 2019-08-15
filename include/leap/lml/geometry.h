@@ -11,14 +11,14 @@
 #pragma once
 
 #include "lml.h"
-#include "point.h"
+#include <leap/lml/point.h>
 #include <leap/lml/vector.h>
 #include <leap/lml/matrix.h>
+#include <leap/optional.h>
 #include <vector>
 #include <list>
 #include <utility>
 #include <algorithm>
-#include <leap/optional.h>
 
 /**
  * \namespace leap::lml
@@ -230,28 +230,6 @@ namespace leap { namespace lml
   Point rotate(Point const &pt, coord_type_t<Point> yaw, coord_type_t<Point> pitch, coord_type_t<Point> roll)
   {
     return rotatez(rotatey(rotatex(pt, roll), pitch), yaw);
-  }
-
-
-  //|///////////////////// transform ////////////////////////////////////////
-  /// transform a point by a transform matrix
-  template<typename T, template<typename, size_t, size_t> class B, typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 2>* = nullptr>
-  Point transform(Matrix<T, 3, 3, B> const &m, Point const &pt, T w = 1)
-  {
-    auto x = m(0,0)*get<0>(pt) + m(0,1)*get<1>(pt) + m(0,2)*w;
-    auto y = m(1,0)*get<0>(pt) + m(1,1)*get<1>(pt) + m(1,2)*w;
-
-    return { x, y };
-  }
-
-  template<typename T, template<typename, size_t, size_t> class B, typename Point, size_t dimension = dim<Point>(), std::enable_if_t<dimension == 3>* = nullptr>
-  Point transform(Matrix<T, 4, 4, B> const &m, Point const &pt, T w = 1)
-  {
-    auto x = m(0,0)*get<0>(pt) + m(0,1)*get<1>(pt) + m(0,2)*get<2>(pt) + m(0,3)*w;
-    auto y = m(1,0)*get<0>(pt) + m(1,1)*get<1>(pt) + m(1,2)*get<2>(pt) + m(1,3)*w;
-    auto z = m(2,0)*get<0>(pt) + m(2,1)*get<1>(pt) + m(2,2)*get<2>(pt) + m(2,3)*w;
-
-    return { x, y, z };
   }
 
 

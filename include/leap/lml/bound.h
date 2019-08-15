@@ -11,9 +11,10 @@
 #pragma once
 
 #include "lml.h"
-#include "point.h"
+#include <leap/lml/point.h>
 #include <leap/lml/vector.h>
 #include <leap/lml/matrix.h>
+#include <leap/lml/quaternion.h>
 #include <leap/optional.h>
 #include <cstddef>
 #include <functional>
@@ -413,14 +414,35 @@ namespace leap { namespace lml
 
   //|///////////////////// transform ////////////////////////////////////////
   /// transform bounding box (affine transform only)
-  template<typename T, size_t N, template<typename, size_t, size_t> class B, typename Bound, size_t Stride, size_t... Indices, std::enable_if_t<sizeof...(Indices) == N-1>* = nullptr>
-  auto transform(Matrix<T, N, N, B> const &matrix, BoundView<Bound, T, Stride, Indices...> const &bound)
+  template<typename T, size_t N, template<typename, size_t, size_t> class B, typename Bound, size_t Stride, size_t... Indices, std::enable_if_t<sizeof...(Indices) == N>* = nullptr>
+  auto transform(Matrix<T, N, N, B> const &m, BoundView<Bound, T, Stride, Indices...> const &bound)
   {
-    auto centre = transform(matrix, Vector<T, N-1>{ ((bound[0][Indices] + bound[1][Indices])/2)... });
-
-    auto halfdim = transform(abs(matrix), Vector<T, N-1>{ ((bound[1][Indices] - bound[0][Indices])/2)... }, T(0));
+    auto centre = transform(m, Vector<T, N>{ ((bound[0][Indices] + bound[1][Indices])/2)... });
+    auto halfdim = transform(abs(m), Vector<T, N>{ ((bound[1][Indices] - bound[0][Indices])/2)... });
 
     return make_bound<Bound>(centre - halfdim, centre + halfdim);
+  }
+
+  template<typename T, size_t N, template<typename, size_t, size_t> class B, typename Bound, size_t Stride, size_t... Indices, std::enable_if_t<sizeof...(Indices) == N-1>* = nullptr>
+  auto transform(Matrix<T, N, N, B> const &m, BoundView<Bound, T, Stride, Indices...> const &bound)
+  {
+    auto centre = transform(m, Vector<T, N-1>{ ((bound[0][Indices] + bound[1][Indices])/2)... });
+    auto halfdim = transform(abs(m), Vector<T, N-1>{ ((bound[1][Indices] - bound[0][Indices])/2)... }, T(0));
+
+    return make_bound<Bound>(centre - halfdim, centre + halfdim);
+  }
+
+  template<typename T, typename V, typename Bound, size_t Stride, size_t... Indices, std::enable_if_t<sizeof...(Indices) == 3>* = nullptr>
+  auto transform(Quaternion<T, V> const &q, BoundView<Bound, T, Stride, Indices...> const &bound)
+  {
+    auto centre = transform(q, V{ ((bound[0][Indices] + bound[1][Indices])/2)... });
+
+    auto halfdim = V{ ((bound[1][Indices] - bound[0][Indices])/2)... };
+    auto rx = dot(abs(q.xaxis()), halfdim);
+    auto ry = dot(abs(q.yaxis()), halfdim);
+    auto rz = dot(abs(q.zaxis()), halfdim);
+
+    return make_bound<Bound>(centre - V{rx, ry, rz}, centre + V{rx, ry, rz});
   }
 
 

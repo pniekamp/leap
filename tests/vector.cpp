@@ -24,7 +24,6 @@ constexpr Vector2f gVector2 = Vector2(3.0f, 4.0f);
 constexpr float gElement = gVector1(0) * gVector2(1);
 //constexpr float gVecNorm = norm(gVector1);
 
-
 //|//////////////////// VectorBasicTest /////////////////////////////////////
 static void VectorBasicTest()
 {

@@ -59,24 +59,30 @@ namespace leap { namespace lml
       template<typename V>
       VectorView &operator /=(V &&v) { static_cast<Vector&>(*this) = static_cast<Vector&>(*this) / std::forward<V>(v); return *this; }
 
-#if 0
-      template<typename V>
-      using has_data_t = decltype(std::declval<V>().data());
+#if __cplusplus < 201703L
+      constexpr T const &operator[](size_t i) const { return *((T const *)this + i); }
+#else
+      template<typename V, typename = void>
+      struct has_data_t : std::false_type {};
 
       template<typename V>
-      using has_array_t = decltype(std::declval<V>().data);
+      struct has_data_t<V, std::void_t<decltype(std::declval<V>().data())>> : std::true_type {};
+
+      template<typename V, typename = void>
+      struct has_array_t : std::false_type {};
+
+      template<typename V>
+      struct has_array_t<V, std::void_t<decltype(std::declval<V>().data)>> : std::true_type {};
 
       constexpr T const &operator[](size_t i) const
       {
-        if constexpr(std::experimental::is_detected<has_data_t, Vector>::value)
+        if constexpr(has_data_t<Vector>())
           return static_cast<Vector const *>(this)->data()[i];
-        else if constexpr(std::experimental::is_detected<has_array_t, Vector>::value)
+        else if constexpr(has_array_t<Vector>())
           return static_cast<Vector const *>(this)->data[i];
         else
           return *((T const *)this + i);
       }
-#else
-      constexpr T const &operator[](size_t i) const { return *((T const *)this + i); }
 #endif
 
     protected:
@@ -720,23 +726,6 @@ namespace leap { namespace lml
   {
     return { v(0), v(1), v(2), w };
   }
-
-
-  //|///////////////////// Vector Constants /////////////////////////////////
-
-  Vector2f const xUnit2f = Vector2(1.0f, 0.0f);
-  Vector2f const yUnit2f = Vector2(0.0f, 1.0f);
-
-  Vector2d const xUnit2d = Vector2(1.0, 0.0);
-  Vector2d const yUnit2d = Vector2(0.0, 1.0);
-
-  Vector3f const xUnit3f = Vector3(1.0f, 0.0f, 0.0f);
-  Vector3f const yUnit3f = Vector3(0.0f, 1.0f, 0.0f);
-  Vector3f const zUnit3f = Vector3(0.0f, 0.0f, 1.0f);
-
-  Vector3d const xUnit3d = Vector3(1.0, 0.0, 0.0);
-  Vector3d const yUnit3d = Vector3(0.0, 1.0, 0.0);
-  Vector3d const zUnit3d = Vector3(0.0, 0.0, 1.0);
 
   /**
    *  @}
