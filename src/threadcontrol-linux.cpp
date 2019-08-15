@@ -705,8 +705,10 @@ namespace leap { namespace threadlib
   {
     SyncLock M(m_mutex);
 
+    static_assert(sizeof(long) == sizeof(void*), "Incompatible thread function types");
+
     pthread_t handle;
-    if (pthread_create(&handle, NULL, (void*(*)(void*))address, parameter) != 0)
+    if (pthread_create(&handle, NULL, (void*(*)(void*))(uintptr_t)address, parameter) != 0)
       return false;
 
   //  pthread_setschedparam(handle, priority);

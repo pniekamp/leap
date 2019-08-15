@@ -660,9 +660,11 @@ namespace leap { namespace threadlib
   {
     SyncLock M(m_mutex);
 
+    static_assert(sizeof(long) == sizeof(DWORD), "Incompatible thread function types");
+
     DWORD ThreadID;
 
-    HANDLE handle = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)address, parameter, 0, &ThreadID);
+    HANDLE handle = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)(uintptr_t)address, parameter, 0, &ThreadID);
     if (handle == nullptr)
       return false;
 

@@ -189,7 +189,7 @@ namespace leap { namespace lml
 
   //|///////////////////// rotation /////////////////////////////////////////
   /// Quaternion between two unit vectors
-  template<typename T, typename V>
+  template<typename V, typename T = decltype(dot(std::declval<V>(), std::declval<V>()))>
   constexpr Quaternion<T, V> rotation(V const &u, V const &v)
   {
     auto costheta = dot(u, v);
