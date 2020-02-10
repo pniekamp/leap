@@ -157,7 +157,7 @@ namespace leap
   template<typename T, class traits>
   constexpr size_t basic_string_view<T, traits>::find(T const *s, size_t pos) const
   {
-    for(auto i = pos; i < m_size - std::min(m_size, traits::length(s)); ++i)
+    for(auto i = pos; i < m_size - std::min(m_size, std::max(size_t(1), traits::length(s)) - 1); ++i)
     {
       bool found = true;
       for(auto j = 0; found && s[j] != 0; ++j)
