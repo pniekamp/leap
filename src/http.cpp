@@ -315,15 +315,15 @@ namespace
     {
       frame[1] |= 127;
       frame[2] = (bytes & 0xFF00000000000000) >> 56;
-      frame[2] = (bytes & 0x00FF000000000000) >> 48;
-      frame[3] = (bytes & 0x0000FF0000000000) >> 40;
-      frame[4] = (bytes & 0x000000FF00000000) >> 32;
-      frame[5] = (bytes & 0x00000000FF000000) >> 24;
-      frame[6] = (bytes & 0x0000000000FF0000) >> 16;
-      frame[7] = (bytes & 0x000000000000FF00) >> 8;
-      frame[8] = (bytes & 0x00000000000000FF) >> 0;
+      frame[3] = (bytes & 0x00FF000000000000) >> 48;
+      frame[4] = (bytes & 0x0000FF0000000000) >> 40;
+      frame[5] = (bytes & 0x000000FF00000000) >> 32;
+      frame[6] = (bytes & 0x00000000FF000000) >> 24;
+      frame[7] = (bytes & 0x0000000000FF0000) >> 16;
+      frame[8] = (bytes & 0x000000000000FF00) >> 8;
+      frame[9] = (bytes & 0x00000000000000FF) >> 0;
 
-      len = 9;
+      len = 10;
     }
 
     if (masked)
